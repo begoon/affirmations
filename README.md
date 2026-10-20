@@ -15,6 +15,7 @@ just status
 just webhook
 just data-export
 just docs
+just docs-deploy
 ```
 
 `just deploy` builds, tests, uploads modules, applies safe migrations, synchronizes
@@ -35,6 +36,12 @@ in `data/common.txt` is one initial affirmation. User `<USER_ID>` gets
 `data/user_<USER_ID>.txt` instead. Build converts these inputs to an ignored JS
 module because Serverless supports JavaScript modules only.
 
+Use «♡» to save a text and «❤️» to remove it.
+`/favorites` browses only personal favourites; «Все тексты» or `/start` returns
+to the full collection. Editing preserves a favourite; reset/reseed clears it.
+Existing users acquire an empty favourites list without losing their texts.
+Favourites are included in the user data export.
+
 Users own independent copies. Welcome → Start → main; main → edit/create →
 text → main. Help → question → Continue → main. Reset requires confirmation,
 clears texts and state, and restores the applicable seed only after Start.
@@ -50,5 +57,9 @@ created before this feature cannot be answered. Failed delivery is reported to
 the operator; send a new reply to retry. Notification routing and reply
 deduplication are stored in separate database tables.
 
-`docs/index.html` is the Russian introduction served by GitHub Pages from
-`main:/docs`. `just docs` previews it at http://localhost:8080.
+`docs/` is the source for the Russian guide at https://demin.ws/affirmations/.
+GitHub Pages serves `docs/` from `main` in this public repository,
+`begoon/affirmations`. `just docs` previews it at http://localhost:8080.
+Commit guide changes on `main`, then run `just docs-deploy` to push them and
+trigger GitHub Pages. This pushes all pending commits on `main`.
+No separate publishing repository, `gh-pages` branch, or redirect is needed.

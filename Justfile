@@ -27,6 +27,10 @@ webhook:
 data-export: build
     npm run data-export
 
-# Preview the future GitHub Pages introduction.
+# Publish committed main changes; GitHub Pages serves docs/ from main.
+docs-deploy:
+    git push origin main
+
+# Preview the GitHub Pages introduction.
 docs:
     python3 -m http.server 8080 --directory docs
