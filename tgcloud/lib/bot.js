@@ -1,6 +1,7 @@
 import { api, db } from 'sdk';
 import { and, eq } from 'sdk/db';
 import { users } from '../schema.js';
+import { ensureTextIds, resolveButton, callbackData } from './buttons.js';
 import { initial, transition } from './flow.js';
 import { languages } from './content.js';
 import { notifyOperator, handleOperatorReply } from './support.js';
@@ -18,14 +19,14 @@ export async function handle(event, ctx = {}) {
     if (callback) await api.answerCallbackQuery({ callback_query_id: event.id });
     return;
   }
-  let action;
+  ensureTextIds(row.data, row.revision + 1);
+  let resolved = {};
   if (callback) {
-    const [revision, name] = event.data.split(':');
-    if (Number(revision) !== row.revision) { await api.answerCallbackQuery({ callback_query_id: event.id, text: t.stale }); return; }
-    action = name;
+    resolved = resolveButton(event.data, message, row.data, row.revision);
+    if (resolved.error) { await api.answerCallbackQuery({ callback_query_id: event.id, text: t[resolved.error] }); return; }
     await api.answerCallbackQuery({ callback_query_id: event.id });
   }
-  const result = transition(row.data, { text: callback ? undefined : event.text, action, userId: id });
+  const result = transition(row.data, { text: callback ? undefined : event.text, ...resolved, userId: id, revision: row.revision + 1 });
   // Claim this revision atomically: concurrent or repeated button presses cannot overwrite it.
   result.state.lastUpdate = update ?? row.data.lastUpdate;
   const revision = row.revision + 1;
@@ -42,10 +43,11 @@ export async function handle(event, ctx = {}) {
     }
   }
   const prefix = result.isAffirmation ? '────────────\n\n' : '';
-  await api.sendMessage({ chat_id: id, text: prefix + result.text,
+  const suffix = result.isAffirmation ? '\n\n────────────' : '';
+  await api.sendMessage({ chat_id: id, text: prefix + result.text + suffix,
     // Telegram entity offsets use UTF-16 units, matching JavaScript string length.
     ...(result.isAffirmation ? { entities: [{ type: 'bold', offset: prefix.length, length: result.text.length }] } : {}),
     reply_markup: {
-    inline_keyboard: result.buttons.map(line => line.map(key => ({ text: t[key], callback_data: `${revision}:${key}` }))),
+    inline_keyboard: result.buttons.map(line => line.map(key => ({ text: t[key], callback_data: callbackData(key, result, revision) }))),
   } });
 }

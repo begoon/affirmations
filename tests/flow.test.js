@@ -97,3 +97,33 @@ test('start exits favourites; help and cancel preserve the filter; new users see
   assert.equal(step(s, { action: 'cancel' }).state.view, 'favorites');
   assert.equal(step(s, { text: '/start' }).state.view, 'all');
 });
+test('deletion requires confirmation and cancellation preserves text and favourites', () => {
+  const s = start(); s.texts = ['First', 'Second', 'Third']; s.current = 1; s.favorites = [0, 1, 2];
+  assert.deepEqual(step(s, { action: 'confirmDelete' }).state.texts, s.texts);
+  const prompt = step(s, { action: 'delete' });
+  assert.equal(prompt.state.mode, 'delete'); assert.match(prompt.text, /Second/);
+  assert.deepEqual(prompt.state.texts, s.texts);
+  assert.deepEqual(step(prompt.state, { action: 'cancel' }).state.texts, s.texts);
+  const deleted = step(prompt.state, { action: 'confirmDelete' });
+  assert.deepEqual(deleted.state.texts, ['First', 'Third']);
+  assert.deepEqual(deleted.state.favorites, [0, 1]);
+  assert.equal(deleted.isAffirmation, true);
+  assert.equal(deleted.buttons[1].at(-1), 'delete');
+  assert.deepEqual(step(deleted.state, { action: 'confirmDelete' }).state.texts, ['First', 'Third']);
+});
+test('deleting last favourite keeps other texts; deleting last text allows fresh creation', () => {
+  let s = start(); s.texts = ['First', 'Second']; s.current = 0; s.favorites = [0]; s.view = 'favorites';
+  s = step(s, { action: 'delete' }).state;
+  let result = step(s, { action: 'confirmDelete' });
+  assert.deepEqual(result.state.texts, ['Second']);
+  assert.deepEqual(result.state.favorites, []); assert.deepEqual(result.buttons, [['all']]);
+  s = step(result.state, { action: 'all' }).state;
+  s = step(s, { action: 'delete' }).state;
+  result = step(s, { action: 'confirmDelete' });
+  assert.deepEqual(result.state.texts, []); assert.equal(result.isAffirmation, false);
+  assert.deepEqual(result.buttons, [['create']]);
+  assert.deepEqual(step(result.state, { text: '/start' }).state.texts, []);
+  s = step(result.state, { action: 'create' }).state;
+  result = step(s, { text: 'Fresh start' });
+  assert.deepEqual(result.state.texts, ['Fresh start']); assert.equal(result.isAffirmation, true);
+});
