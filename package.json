@@ -1,0 +1,15 @@
+{
+  "devDependencies": {
+    "@tgcloud/cli": "0.2.0"
+  },
+  "name": "affirmations-bot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && node --test",
+    "cloud": "node --env-file=.env node_modules/@tgcloud/cli/bin/tgcloud.js",
+    "deploy": "npm run build && node scripts/deploy.mjs",
+    "data-export": "node scripts/admin.mjs export"
+  }
+}

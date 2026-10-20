@@ -1,0 +1,6 @@
+.env*
+data/user_*.txt
+node_modules/
+.tgcloud/
+exports/
+tgcloud/lib/content.js
