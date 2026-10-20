@@ -22,13 +22,12 @@ globalThis.mockSdk = {
 };
 const {handle} = await import('../tgcloud/lib/bot.js');
 const message = text => ({from:{id:7},chat:{id:7,type:'private'},text});
-const button = (revision,action) => ({id:'callback',from:{id:7},message:{chat:{id:7,type:'private'}},data:`${revision}:${action}`});
 test('handler rejects unresolvable/duplicate buttons and keeps help retryable on failure', async () => {
  rows=new Map();otherTables.clear();sent=[];answers=[];failOperator=false;
  await handle(message('/start'),{update:{update_id:1}});
- await handle(button(1,'start'),{update:{update_id:2}});
+ await handle(clickData(dataFor(sent.at(-1),'start')),{update:{update_id:2}});
  assert.equal(rows.get(7).data.new,false);
- await handle(button(1,'edit'),{update:{update_id:3}});
+ await handle(clickData('a:edit:missing:a'),{update:{update_id:3}});
  assert.match(answers.at(-1).text,/недоступен/);
  assert.equal(rows.get(7).data.mode,'main');
  await handle(message('/help'),{update:{update_id:4}});
@@ -148,25 +147,18 @@ test('reset invalidates IDs and old reset confirmations cannot erase newer data'
  assert.match(answers.at(-1).text,/сброса/);
  assert.deepEqual(rows.get(7).data,before);
 });
-test('legacy messages resolve once, survive edits and cannot bind to recreated text', async () => {
+test('legacy callbacks are rejected without changing state', async () => {
  seedExisting();
- const legacy = action => clickData(`1:${action}`, '────────────\n\nAlpha\n\n────────────');
- await handle(legacy('edit'));
- await handle(message('New Alpha'));
- await handle(legacy('favorite'));
- assert.deepEqual(rows.get(7).data.favorites,[0]);
- await handle(legacy('delete'));
- await handle(clickData(dataFor(sent.at(-1),'confirmDelete')));
- await handle(clickData('1:create'));
- await handle(message('Alpha'));
- await handle(legacy('delete'));
- assert.match(answers.at(-1).text,/недоступен/);
- assert.equal(rows.get(7).data.texts.at(-1),'Alpha');
+ await handle(message('/reset'));
+ const before = structuredClone(rows.get(7));
+ for (const action of ['start', 'create', 'edit', 'favorite', 'delete', 'confirmDelete', 'reset']) {
+   await handle(clickData(`${before.revision}:${action}`, '────────────\n\nAlpha\n\n────────────'));
+   assert.match(answers.at(-1).text,/недоступен/);
+   assert.deepEqual(rows.get(7),before);
+ }
 });
-test('ambiguous legacy texts are refused and duplicate updates do not toggle twice', async () => {
+test('duplicate updates do not toggle twice', async () => {
  seedExisting(['Same','Same']);
- await handle(clickData('1:edit','Same'));
- assert.match(answers.at(-1).text,/недоступен/);
  await handle(message('/start'),{update:{update_id:1}});
  const click = clickData(dataFor(sent.at(-1),'favorite'));
  await handle(click,{update:{update_id:2}});

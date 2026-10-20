@@ -22,7 +22,7 @@ export async function handle(event, ctx = {}) {
   ensureTextIds(row.data, row.revision + 1);
   let resolved = {};
   if (callback) {
-    resolved = resolveButton(event.data, message, row.data, row.revision);
+    resolved = resolveButton(event.data, row.data, row.revision);
     if (resolved.error) { await api.answerCallbackQuery({ callback_query_id: event.id, text: t[resolved.error] }); return; }
     await api.answerCallbackQuery({ callback_query_id: event.id });
   }

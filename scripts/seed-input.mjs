@@ -14,7 +14,7 @@ export function parseSeed(contents) {
 }
 export function seededData(previous, texts) {
   const data = {language:previous?.language ?? 'ru',new:true,mode:'welcome',
-    texts:[...texts],current:-1,favorites:[],view:'all',legacyButtons:false,
+    texts:[...texts],current:-1,favorites:[],view:'all',
     lastUpdate:previous?.lastUpdate ?? -1};
   for (const key of ['telegramUser','profileFirstSeenAt','profileLastSeenAt']) {
     if (previous?.[key] !== undefined) data[key] = previous[key];

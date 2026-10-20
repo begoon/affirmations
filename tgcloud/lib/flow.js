@@ -1,7 +1,7 @@
 import { languages, seeds } from './content.js';
 import { ensureTextIds } from './buttons.js';
 export function initial(id) {
-  return { language: 'ru', new: true, mode: 'welcome', texts: [...seeds.common], current: -1, favorites: [], view: 'all', legacyButtons: false, lastUpdate: -1 };
+  return { language: 'ru', new: true, mode: 'welcome', texts: [...seeds.common], current: -1, favorites: [], view: 'all', lastUpdate: -1 };
 }
 export function transition(original, event, random = Math.random) {
   const s = JSON.parse(JSON.stringify(original));
@@ -49,10 +49,9 @@ export function transition(original, event, random = Math.random) {
   else if (cmd === '/favorites') { s.view = 'favorites'; if (s.new) welcome(); else main(); }
   else if (event.action) {
     const a = event.action;
-    if (a === 'reset' && s.mode === 'reset') { Object.assign(s, initial(event.userId)); s.texts = []; s.textIds = []; s.legacyMessages = []; welcome(); }
+    if (a === 'reset' && s.mode === 'reset') { Object.assign(s, initial(event.userId)); s.texts = []; s.textIds = []; welcome(); }
     else if (a === 'confirmDelete' && s.mode === 'delete' && s.current >= 0 && s.current < s.texts.length) {
       const removed = s.current;
-      s.legacyMessages = s.legacyMessages.filter(item => item.id !== s.textIds[removed]);
       s.texts.splice(removed, 1);
       s.textIds.splice(removed, 1);
       s.favorites = s.favorites.filter(i => i !== removed).map(i => i > removed ? i - 1 : i);

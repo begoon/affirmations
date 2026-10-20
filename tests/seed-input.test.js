@@ -27,7 +27,7 @@ test('manual seeding replaces collection, preserves profile and invalidates old 
  assert.equal(seeded.profileLastSeenAt,old.profileLastSeenAt);
  assert.equal(seeded.lastUpdate,100); assert.deepEqual(seeded.favorites,[]);
  ensureTextIds(seeded,12);
- assert.equal(resolveButton(`a:edit:${id}:a`,{},seeded,11).error,'unavailable');
+ assert.equal(resolveButton(`a:edit:${id}:a`,seeded,11).error,'unavailable');
  let s=transition(seeded,{action:'start',userId:123,revision:12}).state;
  assert.deepEqual(s.texts,['Personal A','Personal B']);
  s=transition(s,{text:'/reset',userId:123,revision:13}).state;
