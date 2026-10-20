@@ -13,7 +13,7 @@ let rows, sent, answers, failOperator;
 const otherTables = new Map();
 const tableRows = table => table.tableName === 'users' ? rows : (otherTables.has(table.tableName) ? otherTables.get(table.tableName) : (otherTables.set(table.tableName, new Map()), otherTables.get(table.tableName)));
 globalThis.mockSdk = {
- api: { async sendMessage(p) { if (failOperator && p.chat_id !== 7) throw {code:403}; sent.push(p); return {message_id:sent.length}; }, async answerCallbackQuery(p) {answers.push(p);} },
+ api: { async sendPhoto(p) {sent.push(p);return {message_id:sent.length};}, async sendMessage(p) { if (failOperator && p.chat_id !== 7) throw {code:403}; sent.push(p); return {message_id:sent.length}; }, async answerCallbackQuery(p) {answers.push(p);} },
  db: {
   insert(table) { const rows=tableRows(table); let value; return {values(v){value=v;return this},onConflictDoNothing(){return this},returning(){return this},async run(){if(rows.has(value.id)) return []; rows.set(value.id, structuredClone(value)); return [structuredClone(value)];}} },
   select() {let pred,rows;return {from(table){rows=tableRows(table);return this},where(p){pred=p;return this},async get(){return structuredClone([...rows.values()].find(pred))}}},
@@ -190,4 +190,32 @@ test('captures complete Telegram user fields, refreshes them, and preserves prof
  assert.deepEqual(rows.get(7).data.telegramUser,updated);
  assert.equal(rows.get(7).data.profileFirstSeenAt,firstSeen);
  assert.equal(rows.get(7).data.new,true);
+});
+
+test('welcome uses logo and Start button; normal texts stay plain messages; reset shows logo again', async () => {
+ rows=new Map();otherTables.clear();sent=[];answers=[];failOperator=false;
+ await handle(message('/start'));
+ const welcome=sent.at(-1);
+ assert.equal(welcome.caption,'Добро пожаловать!');
+ assert.match(welcome.photo,/bot-logo\.png$/);
+ assert.equal(welcome.text,undefined);
+ await handle(clickData(dataFor(welcome,'start')));
+ assert.equal(rows.get(7).data.new,false);
+ assert.equal(sent.at(-1).photo,undefined);
+ assert.ok(sent.at(-1).text);
+ await handle(message('/reset'));
+ await handle(clickData(dataFor(sent.at(-1),'reset')));
+ assert.equal(sent.at(-1).caption,'Добро пожаловать!');
+ assert.equal(sent.at(-1).photo,welcome.photo);
+});
+test('failed welcome photo falls back to usable text onboarding', async () => {
+ rows=new Map();otherTables.clear();sent=[];answers=[];failOperator=false;
+ const original=globalThis.mockSdk.api.sendPhoto;
+ globalThis.mockSdk.api.sendPhoto=async()=>{throw {code:400};};
+ try {
+   await handle(message('/start'));
+   assert.equal(sent.at(-1).text,'Добро пожаловать!');
+   assert.ok(dataFor(sent.at(-1),'start'));
+   assert.equal(rows.get(7).data.new,true);
+ } finally {globalThis.mockSdk.api.sendPhoto=original;}
 });

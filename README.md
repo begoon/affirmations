@@ -82,6 +82,11 @@ row, «🗑», asks for confirmation before deleting the current text from the
 personal collection and favourites. Deleting the last text leaves an empty
 collection with a «➕» button; it does not automatically restore seeds.
 
+The welcome message includes the logo hosted at `docs/assets/bot-logo.png`,
+with its caption and Start button. It appears while `new=true`, including after
+reset. If photo delivery fails, the same welcome is sent as text. Publish the
+asset with GitHub Pages before deploying a change to its URL.
+
 Users own independent copies. Welcome → Start → main; main → edit/create →
 text → main. Help → question → Continue → main. Reset requires confirmation,
 clears texts and state, and restores the common seed only after Start.

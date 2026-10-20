@@ -45,12 +45,28 @@ export async function handle(event, ctx = {}) {
       console.error('Operator delivery failed', error.code || 'unknown');
     }
   }
+  const reply_markup = {
+    inline_keyboard: result.buttons.map(line => line.map(key => ({ text: t[key], callback_data: callbackData(key, result, revision) }))),
+  };
+  if (result.state.new && result.state.mode === 'welcome') {
+    try {
+      await api.sendPhoto({
+        chat_id: id,
+        photo: 'https://demin.ws/affirmations/assets/bot-logo.png',
+        caption: result.text,
+        reply_markup,
+      });
+      return;
+    } catch (error) {
+      // Keep onboarding available if Telegram cannot fetch the hosted image.
+      console.error('Welcome photo delivery failed', error.code || 'unknown');
+    }
+  }
   const prefix = result.isAffirmation ? '────────────\n\n' : '';
   const suffix = result.isAffirmation ? '\n\n────────────' : '';
   await api.sendMessage({ chat_id: id, text: prefix + result.text + suffix,
     // Telegram entity offsets use UTF-16 units, matching JavaScript string length.
     ...(result.isAffirmation ? { entities: [{ type: 'bold', offset: prefix.length, length: result.text.length }] } : {}),
-    reply_markup: {
-    inline_keyboard: result.buttons.map(line => line.map(key => ({ text: t[key], callback_data: callbackData(key, result, revision) }))),
-  } });
+    reply_markup,
+  });
 }
