@@ -1,7 +1,7 @@
 import { languages, seeds } from './content.js';
 import { ensureTextIds } from './buttons.js';
 export function initial(id) {
-  return { language: 'ru', new: true, mode: 'welcome', texts: [...(seeds[String(id)] || seeds.common)], current: -1, favorites: [], view: 'all', legacyButtons: false, lastUpdate: -1 };
+  return { language: 'ru', new: true, mode: 'welcome', texts: [...seeds.common], current: -1, favorites: [], view: 'all', legacyButtons: false, lastUpdate: -1 };
 }
 export function transition(original, event, random = Math.random) {
   const s = JSON.parse(JSON.stringify(original));
@@ -60,7 +60,7 @@ export function transition(original, event, random = Math.random) {
       main(true);
     }
     else if (a === 'cancel' || (a === 'continue' && ['main', 'helpSent'].includes(s.mode))) back();
-    else if (a === 'start' && s.new) { s.new = false; if (!s.texts.length) s.texts = [...(seeds[String(event.userId)] || seeds.common)]; s.textIds = undefined; ensureTextIds(s, revision); main(true); }
+    else if (a === 'start' && s.new) { s.new = false; if (!s.texts.length) s.texts = [...seeds.common]; s.textIds = undefined; ensureTextIds(s, revision); main(true); }
     else if (!s.new && s.mode === 'main' && a === 'all') { s.view = 'all'; main(); }
     else if (!s.new && s.mode === 'main' && ['favorite', 'unfavorite'].includes(a) && s.current >= 0 && s.current < s.texts.length && (s.view !== 'favorites' || s.favorites.length)) {
       if (!s.favorites.includes(s.current)) s.favorites.push(s.current);

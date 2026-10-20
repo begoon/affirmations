@@ -4,12 +4,13 @@ import { initial, transition } from '../tgcloud/lib/flow.js';
 import { seeds } from '../tgcloud/lib/content.js';
 const step = (s, event) => transition(s, { userId: 1, ...event }, () => 0);
 const start = () => step(initial(1), { action: 'start' }).state;
-test('welcome, explicit start, isolated seeds and special user', () => {
+test('welcome, explicit start and common seeds for every user', () => {
   const s = initial(1);
   assert.equal(step(s, { text: '/start' }).text, 'Добро пожаловать!');
   assert.equal(s.new, true); assert.equal(start().new, false);
   s.texts[0] = 'changed'; assert.notEqual(initial(2).texts[0], 'changed');
-  assert.deepEqual(initial(429995878).texts, seeds['429995878']);
+  assert.deepEqual(initial(429995878).texts, seeds.common);
+  assert.deepEqual(Object.keys(seeds), ['common']);
 });
 test('random excludes current; editing and creating retain personal texts', () => {
   let s = start(); const old = s.current;
