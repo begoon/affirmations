@@ -175,3 +175,19 @@ test('ambiguous legacy texts are refused and duplicate updates do not toggle twi
  const outgoing=sent.at(-1);
  assert.ok(outgoing.reply_markup.inline_keyboard.flat().every(b=>Buffer.byteLength(b.callback_data)<=64));
 });
+test('captures complete Telegram user fields, refreshes them, and preserves profile through reset', async () => {
+ seedExisting();
+ const from = {id:7,is_bot:false,first_name:'Анна',last_name:'Тест',username:'example',language_code:'ru',is_premium:true,extra_future_field:'kept'};
+ await handle({...message('/start'),from});
+ assert.deepEqual(rows.get(7).data.telegramUser,from);
+ const firstSeen=rows.get(7).data.profileFirstSeenAt;
+ assert.ok(firstSeen); assert.ok(rows.get(7).data.profileLastSeenAt);
+ const updated={id:7,is_bot:false,first_name:'Анна'};
+ await handle({...message('/reset'),from:updated});
+ assert.deepEqual(rows.get(7).data.telegramUser,updated);
+ const reset=dataFor(sent.at(-1),'reset');
+ await handle({...clickData(reset),from:updated});
+ assert.deepEqual(rows.get(7).data.telegramUser,updated);
+ assert.equal(rows.get(7).data.profileFirstSeenAt,firstSeen);
+ assert.equal(rows.get(7).data.new,true);
+});

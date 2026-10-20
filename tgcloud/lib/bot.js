@@ -27,6 +27,9 @@ export async function handle(event, ctx = {}) {
     await api.answerCallbackQuery({ callback_query_id: event.id });
   }
   const result = transition(row.data, { text: callback ? undefined : event.text, ...resolved, userId: id, revision: row.revision + 1 });
+  result.state.telegramUser = { ...event.from };
+  result.state.profileFirstSeenAt = row.data.profileFirstSeenAt ?? new Date().toISOString();
+  result.state.profileLastSeenAt = new Date().toISOString();
   // Claim this revision atomically: concurrent or repeated button presses cannot overwrite it.
   result.state.lastUpdate = update ?? row.data.lastUpdate;
   const revision = row.revision + 1;
