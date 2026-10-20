@@ -43,7 +43,12 @@ conditional database updates prevent concurrent changes from overwriting one
 another. Duplicate update IDs are ignored. Failed operator delivery restores
 help input mode. State writes and Telegram message delivery are not one atomic
 transaction: if sending a response fails after saving, `/start` recovers the
-view. Operator replies are outside the current feature set.
+view. Support questions arrive as distinct notifications in the operator’s private
+chat. Use Telegram Reply on a new notification to send a text answer privately
+to its sender. Replies leave affirmation state unchanged. Old notifications
+created before this feature cannot be answered. Failed delivery is reported to
+the operator; send a new reply to retry. Notification routing and reply
+deduplication are stored in separate database tables.
 
 `docs/index.html` is the Russian introduction served by GitHub Pages from
 `main:/docs`. `just docs` previews it at http://localhost:8080.

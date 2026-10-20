@@ -2,11 +2,13 @@ import { api, db } from 'sdk';
 import { and, eq } from 'sdk/db';
 import { users } from '../schema.js';
 import { initial, transition } from './flow.js';
-import { languages, operatorId } from './content.js';
+import { languages } from './content.js';
+import { notifyOperator, handleOperatorReply } from './support.js';
 export async function handle(event, ctx = {}) {
   const callback = !!event.data;
   const message = callback ? event.message : event;
   if (!event.from || event.from.is_bot || message?.chat?.type !== 'private' || message.chat.id !== event.from.id) return;
+  if (!callback && await handleOperatorReply(event)) return;
   const id = event.from.id;
   await db.insert(users).values({ id, revision: 0, data: initial(id) }).onConflictDoNothing({ target: users.id }).run();
   const row = await db.select().from(users).where(eq(users.id, id)).get();
@@ -32,7 +34,7 @@ export async function handle(event, ctx = {}) {
   if (!claimed.length) return;
   if (result.question) {
     try {
-      await api.sendMessage({ chat_id: operatorId, text: `${t.operatorHeader}: ${id}${event.from.username ? ' @' + event.from.username : ''}\n\n${result.question}` });
+      await notifyOperator(event.from, result.question);
     } catch (error) {
       result.state.mode = 'help'; result.text = t.helpFailed; result.buttons = [['cancel']];
       await db.update(users).set({ data: result.state }).where(and(eq(users.id, id), eq(users.revision, revision))).run();
