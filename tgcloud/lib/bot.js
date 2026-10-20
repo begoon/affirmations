@@ -41,7 +41,11 @@ export async function handle(event, ctx = {}) {
       console.error('Operator delivery failed', error.code || 'unknown');
     }
   }
-  await api.sendMessage({ chat_id: id, text: result.text, reply_markup: {
+  const prefix = result.isAffirmation ? '────────────\n\n' : '';
+  await api.sendMessage({ chat_id: id, text: prefix + result.text,
+    // Telegram entity offsets use UTF-16 units, matching JavaScript string length.
+    ...(result.isAffirmation ? { entities: [{ type: 'bold', offset: prefix.length, length: result.text.length }] } : {}),
+    reply_markup: {
     inline_keyboard: result.buttons.map(line => line.map(key => ({ text: t[key], callback_data: `${revision}:${key}` }))),
   } });
 }

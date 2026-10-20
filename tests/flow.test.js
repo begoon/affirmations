@@ -45,3 +45,55 @@ test('single text can repeat; cancel preserves current text', () => {
   s = step(s, { action: 'edit' }).state;
   assert.equal(step(s, { action: 'cancel' }).text, 'Only');
 });
+test('favourites migrate old users and toggle independently for each user', () => {
+  const old = start(); delete old.favorites; delete old.view;
+  let result = step(old, { text: '/start' });
+  assert.deepEqual(result.state.favorites, []);
+  assert.ok(result.buttons.flat().includes('favorite'));
+  const index = result.state.current;
+  result = step(result.state, { action: 'favorite' });
+  assert.deepEqual(result.state.favorites, [index]);
+  assert.ok(result.buttons.flat().includes('unfavorite'));
+  assert.deepEqual(start().favorites, []);
+  result = step(result.state, { action: 'unfavorite' });
+  assert.deepEqual(result.state.favorites, []);
+});
+test('favourites browsing filters results and removing the last shows an empty view', () => {
+  let s = start();
+  s.favorites = [0, 2];
+  s.current = 1;
+  s = step(s, { text: '/favorites' }).state;
+  assert.equal(s.current, 0);
+  s = step(s, { action: 'more' }).state;
+  assert.equal(s.current, 2);
+  s = step(s, { action: 'unfavorite' }).state;
+  assert.equal(s.current, 0);
+  assert.equal(step(s, { action: 'more' }).state.current, 0);
+  const empty = step(s, { action: 'unfavorite' });
+  assert.match(empty.text, /пока нет/);
+  assert.deepEqual(empty.buttons, [['all']]);
+  assert.equal(step(empty.state, { action: 'all' }).state.view, 'all');
+});
+test('editing retains favourite identity; creating exits filter; reset clears favourites', () => {
+  let s = start();
+  s = step(s, { action: 'favorite' }).state;
+  s = step(s, { text: '/favorites' }).state;
+  const index = s.current;
+  s = step(s, { action: 'edit' }).state;
+  s = step(s, { text: 'Updated favourite' }).state;
+  assert.equal(s.view, 'favorites'); assert.deepEqual(s.favorites, [index]);
+  assert.equal(step(s, { action: 'more' }).text, 'Updated favourite');
+  s = step(s, { action: 'create' }).state;
+  s = step(s, { text: 'New text' }).state;
+  assert.equal(s.view, 'all'); assert.equal(s.favorites.includes(s.current), false);
+  s = step(s, { text: '/reset' }).state;
+  assert.deepEqual(step(s, { action: 'reset' }).state.favorites, []);
+});
+test('start exits favourites; help and cancel preserve the filter; new users see welcome', () => {
+  assert.equal(step(initial(1), { text: '/favorites' }).state.new, true);
+  let s = start(); s.favorites = [s.current];
+  s = step(s, { text: '/favorites' }).state;
+  s = step(s, { text: '/help' }).state;
+  assert.equal(step(s, { action: 'cancel' }).state.view, 'favorites');
+  assert.equal(step(s, { text: '/start' }).state.view, 'all');
+});
