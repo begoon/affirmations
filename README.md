@@ -40,14 +40,21 @@ Use «♡» to save a text and «❤️» to remove it.
 `/favorites` browses only personal favourites; «Все тексты» or `/start` returns
 to the full collection. Editing preserves a favourite; reset/reseed clears it.
 Existing users acquire an empty favourites list without losing their texts.
-Favourites are included in the user data export.
+Favourites are included in the user data export. The last button on the second
+row, «🗑», asks for confirmation before deleting the current text from the
+personal collection and favourites. Deleting the last text leaves an empty
+collection with a «➕» button; it does not automatically restore seeds.
 
 Users own independent copies. Welcome → Start → main; main → edit/create →
 text → main. Help → question → Continue → main. Reset requires confirmation,
 clears texts and state, and restores the applicable seed only after Start.
-`/start` exits an input mode. Old buttons carry a revision and are rejected;
-conditional database updates prevent concurrent changes from overwriting one
-another. Duplicate update IDs are ignored. Failed operator delivery restores
+`/start` exits an input mode. Text buttons carry permanent per-user IDs, so
+buttons on older messages still target their original texts after edits and
+deletions elsewhere in the collection. Reset/reseed invalidates those IDs.
+Pre-upgrade messages are matched to an unambiguous text during migration;
+ambiguous or missing matches are refused. Delete confirmations target the text
+ID; reset confirmations remain tied to the current revision. Conditional
+database updates prevent concurrent changes from overwriting one another. Duplicate update IDs are ignored. Failed operator delivery restores
 help input mode. State writes and Telegram message delivery are not one atomic
 transaction: if sending a response fails after saving, `/start` recovers the
 view. Support questions arrive as distinct notifications in the operator’s private
