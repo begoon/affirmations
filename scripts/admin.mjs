@@ -1,3 +1,4 @@
+import { seedUserId, parseSeed, seededData } from './seed-input.mjs';
 import { userInfo, usersTable } from './user-output.mjs';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 process.loadEnvFile('.env');
@@ -72,30 +73,29 @@ try {
     const file = `exports/snapshot-${exportedAt.replace(/[:.]/g, '-')}.json`;
     await writeFile(file, JSON.stringify(snapshot, null, 2) + '\n', {mode:0o600, flag:'wx'});
     console.log(`Exported ${rows.length} users, ${supportMessages.length} support routes and ${supportReplies.length} reply records to ${file}`);
-  } else if (mode === 'reseed') {
-    const id = 429995878;
+  } else if (mode === 'seed') {
+    const id = seedUserId(process.argv[3], process.env.OPERATOR_ID);
+    const file = `data/user_${id}.txt`;
+    // Validate the local input before accessing or changing the live account.
+    const texts = parseSeed(await readFile(file, 'utf8'));
     const previous = await run(`import { db } from 'sdk'; import { eq } from 'sdk/db'; import { users } from '../schema.js';
       export default async ({id}) => await db.select().from(users).where(eq(users.id, id)).get();`, { id });
-    await mkdir('exports', { recursive: true, mode: 0o700 });
-    const backup = `exports/before-reseed-${id}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    await writeFile(backup, JSON.stringify(previous, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-    const result = await run(`import { db } from 'sdk'; import { eq, and } from 'sdk/db'; import { users } from '../schema.js'; import { initial } from '../lib/flow.js';
-      export default async ({id, revision, lastUpdate}) => {
-        const data = initial(id);
-        data.lastUpdate = lastUpdate;
+    await mkdir('exports', { recursive:true, mode:0o700 });
+    const backup = `exports/before-seed-${id}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    await writeFile(backup, JSON.stringify(previous, null, 2) + '\n', {mode:0o600, flag:'wx'});
+    const data = seededData(previous?.data, texts);
+    const result = await run(`import { db } from 'sdk'; import { eq, and } from 'sdk/db'; import { users } from '../schema.js';
+      export default async ({id, revision, data}) => {
         const changed = revision === null
           ? await db.insert(users).values({id, revision:0, data}).onConflictDoNothing({target:users.id}).returning().run()
           : await db.update(users).set({revision:revision+1, data}).where(and(eq(users.id,id),eq(users.revision,revision))).returning().run();
-        if (changed.length !== 1) throw Error('Account changed during reseed; retry.');
+        if (changed.length !== 1) throw Error('Account changed while seeding; retry. No changes applied.');
         const saved = await db.select().from(users).where(eq(users.id,id)).get();
-        if (JSON.stringify(saved.data.texts) !== JSON.stringify(data.texts) || !saved.data.new) throw Error('Reseed verification failed');
+        if (JSON.stringify(saved.data) !== JSON.stringify(data)) throw Error('Seed verification failed');
         return {count:saved.data.texts.length};
-      };`, { id, revision: previous?.revision ?? null, lastUpdate: previous?.data.lastUpdate ?? -1 });
-    console.log(`Reseeded ${id} with ${result.count} texts; verified welcome state. Backup: ${backup}`);
-  } else if (mode === 'seed') {
-    await run(`import { db } from 'sdk'; import { users } from '../schema.js'; import { initial } from '../lib/flow.js'; import { handle } from '../lib/bot.js';
-      export default async () => { await db.insert(users).values({id:429995878,revision:0,data:initial(429995878)}).onConflictDoNothing({target:users.id}).run(); return true; };`);
-    console.log('Testing account seeded (existing data preserved).');
+      };`, {id, revision:previous?.revision ?? null, data});
+    console.log(`Seeded ${id} with ${result.count} texts from ${file}. Backup: ${backup}`);
+    console.log('Send /start and tap «Начать». A later /reset restores common texts.');
   } else if (mode === 'setup') {
     const me = await run(`import { api } from 'sdk'; import { languages } from '../lib/content.js';
       export default async () => { const t = languages.ru; const commands = [{command:'start',description:t.commandStart},{command:'favorites',description:t.commandFavorites},{command:'help',description:t.commandHelp},{command:'reset',description:t.commandReset}];
@@ -103,7 +103,7 @@ try {
     const html = await readFile('docs/index.html', 'utf8');
     await writeFile('docs/index.html', html.replace(/https:\/\/t\.me\/[A-Za-z0-9_]+/g, `https://t.me/${me.username}`));
     console.log(`Bot configured: https://t.me/${me.username}`);
-  } else throw Error('Usage: node scripts/admin.mjs export-data|setup|seed|reseed|list-users');
+  } else throw Error('Usage: node scripts/admin.mjs export-data|setup|seed [ID]|list-users');
 } catch (error) {
   console.error(error.description || error.message);
   process.exitCode = 1;

@@ -15,6 +15,8 @@ just status
 just webhook
 just export-data
 just list-users
+just seed              # uses OPERATOR_ID
+just seed 123456789    # explicit Telegram user ID
 just docs
 just docs-deploy
 ```
@@ -55,13 +57,25 @@ are never deployed as public endpoints. The CLI version is pinned because
 these routines use its internal API client.
 
 Edit UI strings in `lang.json`, with Russian as the fallback. Each nonempty line
-in `data/common.txt` is one initial affirmation. User `<USER_ID>` gets
-`data/user_<USER_ID>.txt` instead. Build converts these inputs to an ignored JS
-module because Serverless supports JavaScript modules only.
+in `data/common.txt` is one initial affirmation. Every new user and every reset
+uses this common seed. Personal files are never bundled or deployed.
+
+`just seed ID` explicitly replaces that user's collection with
+`data/user_ID.txt`. Omit ID to use `OPERATOR_ID` from `.env`. The input must be a
+nonempty file containing one text per line, up to 4000 characters each. It is
+validated before any remote changes. Order and duplicate lines are preserved.
+The command saves the previous database row in a private, git-ignored backup,
+clears favourites and pending input, invalidates old text buttons, and returns
+the account to welcome. Profile fields and update deduplication are preserved.
+The user sends `/start` and taps «Начать» to use the imported texts. A later
+`/reset` restores common texts, not the imported file. Seeding also supports a
+previously unregistered ID; it does not send any Telegram messages. Concurrent
+account changes abort the replacement rather than overwriting newer data.
+Personal files remain git-ignored. Normal builds do not read them.
 
 Use «♡» to save a text and «❤️» to remove it.
 `/favorites` browses only personal favourites; «Все тексты» or `/start` returns
-to the full collection. Editing preserves a favourite; reset/reseed clears it.
+to the full collection. Editing preserves a favourite; reset/manual seeding clears it.
 Existing users acquire an empty favourites list without losing their texts.
 Favourites are included in the user data export. The last button on the second
 row, «🗑», asks for confirmation before deleting the current text from the
@@ -70,10 +84,10 @@ collection with a «➕» button; it does not automatically restore seeds.
 
 Users own independent copies. Welcome → Start → main; main → edit/create →
 text → main. Help → question → Continue → main. Reset requires confirmation,
-clears texts and state, and restores the applicable seed only after Start.
+clears texts and state, and restores the common seed only after Start.
 `/start` exits an input mode. Text buttons carry permanent per-user IDs, so
 buttons on older messages still target their original texts after edits and
-deletions elsewhere in the collection. Reset/reseed invalidates those IDs.
+deletions elsewhere in the collection. Reset/manual seeding invalidates those IDs.
 Pre-upgrade messages are matched to an unambiguous text during migration;
 ambiguous or missing matches are refused. Delete confirmations target the text
 ID; reset confirmations remain tied to the current revision. Conditional

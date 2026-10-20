@@ -38,3 +38,8 @@ docs-deploy:
 # Preview the GitHub Pages introduction.
 docs:
     python3 -m http.server 8080 --directory docs
+
+# Replace an account's texts from data/user_ID.txt; defaults to OPERATOR_ID.
+[positional-arguments]
+seed id='':
+    node scripts/admin.mjs seed "$1"
