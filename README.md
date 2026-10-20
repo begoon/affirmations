@@ -13,7 +13,8 @@ just test
 just deploy
 just status
 just webhook
-just data-export
+just export-data
+just list-users
 just docs
 just docs-deploy
 ```
@@ -22,11 +23,33 @@ just docs-deploy
 the webhook, and registers commands. The deploy script recovers from the CLI
 0.2.0 snapshot-writing bug by fetching the server snapshot after upload.
 
-`just data-export` saves every user record (ID, revision, language, onboarding
-flag, mode, current text index, complete personal collection, last update ID)
-to timestamped `exports/users-*.json`. Exports are git-ignored, with directory
-mode 0700 and file mode 0600. Pagination uses user IDs; an export taken while
-users are interacting is not a single point-in-time database snapshot.
+`just list-users` prints a console table: ID, first name, last name, nick, email,
+and last active (for example `1m`, `2h`, `3d`). Names are refreshed with `getChat`;
+other saved profile fields come from processed Telegram updates. `-` means the
+field or activity time is unavailable. Email and phone numbers are not normally
+exposed in bot user profiles. Activity timestamps begin when profile recording
+was added; historical visits cannot be reconstructed. Listing does not send
+messages, change activity timestamps, or print personal affirmations.
+
+`just export-data` saves a version-2 recovery snapshot to
+`exports/snapshot-*.json`. It includes:
+
+- Every complete user database row (`id`, `revision`, `data`), including texts,
+  favourites, permanent text IDs, conversation state and captured timestamps.
+- A `user` object on each row containing available Telegram User fields and the
+  full fresh `getChat` result under `user.chat`. Lookup failures are recorded
+  in `user.chat_lookup_error`; the saved profile is still retained.
+- All support-routing and reply-deduplication records, the deployed database
+  schema, deployment revision, public app ID, and export start/end times.
+
+The snapshot preserves raw database rows for recovery, with profile enrichment
+kept outside `data`. It contains private data and is git-ignored; directory mode
+is 0700 and file mode is 0600. The export is a paginated live read, not an atomic
+point-in-time snapshot: concurrent writes can span different moments. Source
+code, credentials and Telegram chat history are not included. A restore command
+is not implemented yet. `profile_first_seen_at` (stored as `profileFirstSeenAt`)
+is when profile recording began, not a historical registration date.
+
 Administrative modules run through the CLI's authenticated management API and
 are never deployed as public endpoints. The CLI version is pinned because
 these routines use its internal API client.

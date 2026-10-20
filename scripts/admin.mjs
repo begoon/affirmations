@@ -1,7 +1,8 @@
+import { userInfo, usersTable } from './user-output.mjs';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 process.loadEnvFile('.env');
 // Pin the CLI version: its authenticated run API supplies temporary modules without deploying them.
-const { runFunction } = await import('../node_modules/@tgcloud/cli/src/api/endpoints.js');
+const { runFunction, getFiles } = await import('../node_modules/@tgcloud/cli/src/api/endpoints.js');
 const sources = {};
 async function scan(dir) {
   for (const item of await readdir(dir, { withFileTypes: true })) {
@@ -16,22 +17,61 @@ async function run(code, args = {}) {
   const result = await runFunction(process.env.TGCLOUD_TOKEN, 'endpoints/admin', { ...sources, 'endpoints/admin': code }, args);
   return result.result;
 }
+async function readUsers() {
+  const list = [];
+  let after = 0;
+  while (true) {
+    const batch = await run(`import { api, db } from 'sdk'; import { gt, asc } from 'sdk/db'; import { users } from '../schema.js';
+      export default async ({after}) => {
+        const rows = await db.select().from(users).where(gt(users.id, after)).orderBy(asc(users.id)).limit(20).all();
+        const result = [];
+        for (const row of rows) {
+          let chat = null, error = null;
+          try { chat = await api.getChat({chat_id:row.id}); }
+          catch (e) { error = {code:e.code ?? null, message:e.description || 'Chat unavailable'}; }
+          result.push({row, chat, error});
+        }
+        return result;
+      };`, { after });
+    if (!Array.isArray(batch)) throw Error('Unexpected user data response');
+    for (const {row, chat, error} of batch) list.push({...row, user:userInfo(row, chat, error)});
+    if (batch.length < 20) return list;
+    after = batch.at(-1).row.id;
+  }
+}
+async function readTable(name) {
+  const result = [];
+  let after = 0;
+  while (true) {
+    const batch = await run(`import { db } from 'sdk'; import { gt, asc } from 'sdk/db'; import { ${name} as table } from '../schema.js';
+      export default async ({after}) => await db.select().from(table).where(gt(table.id, after)).orderBy(asc(table.id)).limit(100).all();`, {after});
+    if (!Array.isArray(batch)) throw Error('Unexpected table response');
+    result.push(...batch);
+    if (batch.length < 100) return result;
+    after = batch.at(-1).id;
+  }
+}
 try {
-  if (mode === 'export') {
-    const rows = [];
-    let after = 0;
-    while (true) {
-      const batch = await run(`import { db } from 'sdk'; import { gt, asc } from 'sdk/db'; import { users } from '../schema.js';
-        export default async ({after}) => await db.select().from(users).where(gt(users.id, after)).orderBy(asc(users.id)).limit(100).all();`, { after });
-      if (!Array.isArray(batch)) throw Error('Unexpected export response');
-      rows.push(...batch);
-      if (batch.length < 100) break;
-      after = batch.at(-1).id;
-    }
-    await mkdir('exports', { recursive: true, mode: 0o700 });
-    const file = `exports/users-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    await writeFile(file, JSON.stringify({ formatVersion: 1, exportedAt: new Date().toISOString(), users: rows }, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-    console.log(`Exported ${rows.length} users to ${file}`);
+  if (mode === 'list-users') {
+    console.log(usersTable(await readUsers()));
+  } else if (mode === 'export-data') {
+    const startedAt = new Date().toISOString();
+    // Use the deployed schema for recovery, rather than any unshipped local changes.
+    const deployed = await getFiles(process.env.TGCLOUD_TOKEN);
+    const rows = await readUsers();
+    const supportMessages = await readTable('supportMessages');
+    const supportReplies = await readTable('supportReplies');
+    const exportedAt = new Date().toISOString();
+    const snapshot = {formatVersion:2, startedAt, exportedAt,
+      consistency:'paginated-live-read',
+      appId:process.env.TGCLOUD_TOKEN.split(':')[0],
+      deployedRevision:deployed.revision, schema:deployed.canonical_modules.schema,
+      users:rows, supportMessages, supportReplies};
+    if (typeof snapshot.schema !== 'string') throw Error('Missing deployed schema; export aborted');
+    await mkdir('exports', { recursive:true, mode:0o700 });
+    const file = `exports/snapshot-${exportedAt.replace(/[:.]/g, '-')}.json`;
+    await writeFile(file, JSON.stringify(snapshot, null, 2) + '\n', {mode:0o600, flag:'wx'});
+    console.log(`Exported ${rows.length} users, ${supportMessages.length} support routes and ${supportReplies.length} reply records to ${file}`);
   } else if (mode === 'reseed') {
     const id = 429995878;
     const previous = await run(`import { db } from 'sdk'; import { eq } from 'sdk/db'; import { users } from '../schema.js';
@@ -63,7 +103,7 @@ try {
     const html = await readFile('docs/index.html', 'utf8');
     await writeFile('docs/index.html', html.replace(/https:\/\/t\.me\/[A-Za-z0-9_]+/g, `https://t.me/${me.username}`));
     console.log(`Bot configured: https://t.me/${me.username}`);
-  } else throw Error('Usage: node scripts/admin.mjs export|setup|seed|reseed');
+  } else throw Error('Usage: node scripts/admin.mjs export-data|setup|seed|reseed|list-users');
 } catch (error) {
   console.error(error.description || error.message);
   process.exitCode = 1;

@@ -10,6 +10,6 @@
     "test": "npm run build && node --test",
     "cloud": "node --env-file=.env node_modules/@tgcloud/cli/bin/tgcloud.js",
     "deploy": "npm run build && node scripts/deploy.mjs",
-    "data-export": "node scripts/admin.mjs export"
+    "export-data": "node scripts/admin.mjs export-data"
   }
 }
