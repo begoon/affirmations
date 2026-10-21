@@ -34,7 +34,10 @@ was added; historical visits cannot be reconstructed. Listing does not send
 messages, change activity timestamps, or print personal affirmations.
 
 The hidden `/users` command sends the same user fields to `OPERATOR_ID` in the
-bot's private chat, split into Telegram-sized messages with a total count. It
+bot's private chat, one line per user, sorted by latest activity (unknown last),
+split into Telegram-sized messages with a total count. Activity under 60 minutes
+is marked 🔴 (Telegram does not support arbitrary text colours); activity from
+1 to 24 hours is bold; older or unknown activity is plain. It
 refreshes names through `getChat` and falls back to saved profile fields when a
 lookup fails. It does not change activity timestamps or pending chat input.
 Other users' `/users` messages are silently ignored, including during editing
