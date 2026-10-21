@@ -6,22 +6,23 @@ import { userInfo, lastActive, collectionStatus } from './user-info.js';
 
 function field(value) {
   // Plain text only; keep profile fields on one line and bound each entry's size.
-  const text = String(value ?? '-').replace(/[\x00-\x1f\x7f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, ' ');
-  return Array.from(text).slice(0, 256).join('') || '-';
+  const text = String(value ?? '').replace(/[\x00-\x1f\x7f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, ' ');
+  return Array.from(text).slice(0, 256).join('').trim();
 }
 export function userEntry(row, chat, now) {
   const user = userInfo(row, chat);
   const timestamp = Date.parse(row.data.profileLastSeenAt);
   const age = Number.isFinite(timestamp) ? Math.max(0, now - timestamp) : Infinity;
   const activity = lastActive(row.data.profileLastSeenAt, now);
-  const prefix = [
+  const marker = age < 3600000 ? '🟢 ' : age < 86400000 ? '🟡 ' : '';
+  const text = [
     String(row.id),
-    `${field(user.first_name)} ${field(user.last_name)}`,
+    [field(user.first_name), field(user.last_name)].filter(Boolean).join(' '),
     field(user.username ? '@' + user.username : null),
     field(user.email),
-    age < 3600000 ? '🟢 ' : age < 86400000 ? '🟡 ' : '',
-  ].join(' · ');
-  const text = prefix + activity + ' · ' + collectionStatus(row.data, seeds.common) + (!chat ? ' (сохранённый профиль)' : '');
+    activity === '-' ? '' : marker + activity,
+    collectionStatus(row.data, seeds.common),
+  ].filter(Boolean).join(' · ') + (!chat ? ' (сохранённый профиль)' : '');
   return text;
 }
 
@@ -56,7 +57,7 @@ export async function handleUsersCommand(message) {
     }
     text += (text ? '\n' : '') + entry;
   }
-  const summary = `Всего пользователей: ${all.length}.\n«-» — нет данных. 🟢 — менее 60m; 🟡 — от 1h до 24h. s — секунды, m — минуты, h — часы, d — дни.\n📦 — исходная подборка; ✍️ N — личные тексты; ✂️ — сокращённая; 🌱 — ожидает «Начать».`;
+  const summary = `Всего пользователей: ${all.length}.\n🟢 — менее 60m; 🟡 — от 1h до 24h. s — секунды, m — минуты, h — часы, d — дни.\n📦 — исходная подборка; ✍️ N — личные тексты; ✂️ — сокращённая; 🌱 — ожидает «Начать».`;
   if (text && text.length + summary.length + 2 > 3500) { await send(text); text = ''; }
   await send(text ? `${text}\n\n${summary}` : summary);
   return true;

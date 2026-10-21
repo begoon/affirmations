@@ -36,8 +36,9 @@ messages, change activity timestamps, or print personal affirmations.
 The hidden `/users` command sends the same user fields to `OPERATOR_ID` in the
 bot's private chat, one line per user, sorted by latest activity (unknown last),
 split into Telegram-sized messages with a total count. Activity under 60 minutes
-is marked 🟢; activity from 1 to 24 hours is marked 🟡; older or unknown activity
-is plain. Rows omit ID, email and activity labels and use no bold formatting. It
+is marked 🟢; activity from 1 to 24 hours is marked 🟡; older activity is plain.
+Missing fields (including unknown activity) and their separators are omitted.
+Rows omit ID, email and activity labels and use no bold formatting. It
 refreshes names through `getChat` and falls back to saved profile fields when a
 lookup fails. It does not change activity timestamps or pending chat input.
 Other users' `/users` messages are silently ignored, including during editing

@@ -348,7 +348,7 @@ test('/users handles empty database and oversized profile fields safely', async 
  await handle(own);assert.equal(sent.length,1);assert.match(sent[0].text,/Всего пользователей: 0/);
  const {userEntry}=await import('../tgcloud/lib/users-command.js');
  const entry=userEntry({id:9,data:{telegramUser:{first_name:'😀'.repeat(2000),last_name:'L'.repeat(2000),username:'U'.repeat(2000),email:'E'.repeat(2000)}}},null,Date.now());
- assert.ok(entry.length<3500);assert.match(entry,/ · - · ✂️ \(сохранённый профиль\)$/);assert.doesNotMatch(entry,/\ud83d(?!\ude00)/u);
+ assert.ok(entry.length<3500);assert.match(entry,/ · ✂️ \(сохранённый профиль\)$/);assert.doesNotMatch(entry,/\ud83d(?!\ude00)/u);
 });
 
 test('/users activity markers use green under 60m and yellow under 24h without labels', async () => {
@@ -357,7 +357,7 @@ test('/users activity markers use green under 60m and yellow under 24h without l
  for(const [minutes,marker] of [[59,'🟢'],[60,'🟡'],[1439,'🟡'],[1440,''],[2880,'']]) {
    const row={id:166564781,data:{profileLastSeenAt:new Date(now-minutes*60000).toISOString()}};
    const entry=userEntry(row,{first_name:'I’m',last_name:'OK',username:'AnnaOK'},now);
-   assert.ok(entry.startsWith('166564781 · I’m OK · @AnnaOK · - · '));
+   assert.ok(entry.startsWith('166564781 · I’m OK · @AnnaOK · '));
    assert.equal(entry.includes('🟢'),marker==='🟢');assert.equal(entry.includes('🟡'),marker==='🟡');
    assert.doesNotMatch(entry,/\n|ID:|Email:|Активность:|🔴/);
  }
