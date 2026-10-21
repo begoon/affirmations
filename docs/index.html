@@ -7,6 +7,7 @@
 <link rel="canonical" href="https://demin.ws/affirmations/">
 <style>
 :root{font-family:system-ui,sans-serif;color:#24372e;background:#f6f5ef;line-height:1.65}body{margin:0}main{max-width:680px;margin:auto;padding:64px 24px}small{color:#536c5d;letter-spacing:.13em}h1{font-size:clamp(2.2rem,7vw,3.5rem);line-height:1.12;font-weight:650;letter-spacing:-.04em}h2{margin-top:2rem;font-size:1.3rem}p,li{font-size:1.05rem}.open{display:inline-block;background:#295b43;color:#fff;padding:13px 24px;border-radius:30px;text-decoration:none;margin:12px 0}a:focus-visible{outline:3px solid #ba7433;outline-offset:4px}li{margin-bottom:12px}footer{border-top:1px solid #d5dbd4;margin-top:40px;padding-top:20px;color:#536c5d}
+.screenshots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}.screenshots figure{margin:0;min-width:0}.screenshots a{display:block;border-radius:16px;overflow:hidden;border:1px solid #d5dbd4;box-shadow:0 5px 20px #24372e0b}.screenshots img{display:block;width:100%;height:auto}.screenshots figcaption{margin-top:10px;font-size:.85rem;line-height:1.45;color:#536c5d}.screenshot-note{font-size:.9rem;color:#536c5d}@media(max-width:600px){.screenshots{grid-template-columns:1fr;max-width:320px;margin:24px auto;gap:24px}}
 </style>
 </head>
 <body><main>
@@ -29,6 +30,12 @@
 <h2>Карточки в мини-приложении</h2>
 <p>Ботом можно пользоваться как обычно в чате или в мини-приложении. Отправьте <b>/view</b> и нажмите <b>«Открыть аффирмации»</b>. Если вы ещё не начали пользоваться ботом, сначала отправьте <b>/start</b> и нажмите <b>«Начать»</b>.</p>
 <p>Мини-приложение показывает одну случайную аффирмацию в виде карточки. Нажмите <b>«Следующая →»</b>, чтобы открыть другую: если в подборке есть ещё тексты, текущая карточка не повторится сразу. Во вкладке <b>«Все тексты»</b> карточки выбираются из всей подборки, а во вкладке <b>«Избранное»</b> — только из любимых текстов. Нажимайте сердечко, чтобы сохранить или убрать текст из избранного. Кнопка <b>«Изменить»</b> открывает редактор: введите непустой текст длиной до 4000 символов и нажмите <b>«Сохранить»</b>. Кнопка <b>«Удалить»</b> попросит подтверждение.</p>
+<div class="screenshots" aria-label="Скриншоты мини-приложения">
+<figure><a href="assets/miniapp-card.png" aria-label="Открыть скриншот карточки в полном размере"><img src="assets/miniapp-card.png" width="780" height="1688" loading="lazy" alt="Светлая тема: одна аффирмация, сердечко, изменение, удаление и кнопка «Следующая»."></a><figcaption>Одна карточка за раз. «Следующая» выбирает другой текст.</figcaption></figure>
+<figure><a href="assets/miniapp-favorites.png" aria-label="Открыть скриншот избранного в полном размере"><img src="assets/miniapp-favorites.png" width="780" height="1688" loading="lazy" alt="Тёмная тема: вкладка «Избранное» с сохранённой аффирмацией."></a><figcaption>Любимые тексты в избранном. Есть и тёмная тема.</figcaption></figure>
+<figure><a href="assets/miniapp-edit.png" aria-label="Открыть скриншот редактора в полном размере"><img src="assets/miniapp-edit.png" width="780" height="1688" loading="lazy" alt="Редактор аффирмации с полем текста и кнопками «Отмена» и «Сохранить»."></a><figcaption>Меняйте слова под себя и сохраняйте прямо в приложении.</figcaption></figure>
+</div>
+<p class="screenshot-note">Примеры интерфейса с текстами из начальной подборки. Нажмите на изображение, чтобы рассмотреть его.</p>
 <p>Чат и мини-приложение используют одну подборку: изменения доступны в обоих режимах. Уже отправленные сообщения в чате сохраняют прежний текст — чтобы увидеть свежий вариант, отправьте <b>/start</b>. Новые аффирмации можно добавлять кнопкой <b>«➕»</b> в чате. Если подборка изменилась во время редактирования, приложение попросит обновить список: ваш вариант не перезапишет изменения автоматически.</p>
 <p>Открытие мини-приложения не отменяет ввод текста в чате. Но если в приложении изменить или удалить аффирмацию, которую вы в этот момент редактируете в чате, ожидающее редактирование будет отменено. Чтобы продолжить, выберите текст заново.</p>
 <h2>Значок на главном экране телефона</h2>
