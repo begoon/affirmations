@@ -43,6 +43,12 @@ lookup fails. It does not change activity timestamps or pending chat input.
 Other users' `/users` messages are silently ignored, including during editing
 or support input. The command is deliberately absent from the public command
 menu and user guide. No affirmation texts or support questions are included.
+Each row also shows the current collection: 📦 matches the starter texts,
+✍️ N counts personal texts (including extra duplicate copies), ✂️ contains only
+a reduced starter set (including an empty collection), and 🌱 is awaiting Start
+(including after reset or import). Comparison ignores order and favourites and
+uses the current common seed; it does not reconstruct editing history or
+distinguish edits from additions. Imported texts count as personal after Start.
 
 `just export-data` saves a version-2 recovery snapshot to
 `exports/snapshot-*.json`. It includes:

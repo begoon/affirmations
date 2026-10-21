@@ -1,8 +1,8 @@
 import { api, db } from 'sdk';
 import { gt, asc } from 'sdk/db';
 import { users } from '../schema.js';
-import { operatorId } from './content.js';
-import { userInfo, lastActive } from './user-info.js';
+import { operatorId, seeds } from './content.js';
+import { userInfo, lastActive, collectionStatus } from './user-info.js';
 
 function field(value) {
   // Plain text only; keep profile fields on one line and bound each entry's size.
@@ -21,7 +21,7 @@ export function userEntry(row, chat, now) {
     field(user.email),
     age < 3600000 ? '🟢 ' : age < 86400000 ? '🟡 ' : '',
   ].join(' · ');
-  const text = prefix + activity + (!chat ? ' (сохранённый профиль)' : '');
+  const text = prefix + activity + ' · ' + collectionStatus(row.data, seeds.common) + (!chat ? ' (сохранённый профиль)' : '');
   return text;
 }
 
@@ -56,7 +56,7 @@ export async function handleUsersCommand(message) {
     }
     text += (text ? '\n' : '') + entry;
   }
-  const summary = `Всего пользователей: ${all.length}.\n«-» — нет данных. 🟢 — менее 60m; 🟡 — от 1h до 24h. s — секунды, m — минуты, h — часы, d — дни.`;
+  const summary = `Всего пользователей: ${all.length}.\n«-» — нет данных. 🟢 — менее 60m; 🟡 — от 1h до 24h. s — секунды, m — минуты, h — часы, d — дни.\n📦 — исходная подборка; ✍️ N — личные тексты; ✂️ — сокращённая; 🌱 — ожидает «Начать».`;
   if (text && text.length + summary.length + 2 > 3500) { await send(text); text = ''; }
   await send(text ? `${text}\n\n${summary}` : summary);
   return true;

@@ -27,3 +27,25 @@ test('console listing is readable, sanitises controls and never prints personal 
  assert.doesNotMatch(output,/private affirmation|\x1b/);
  assert.match(usersTable([],now),/0 user\(s\)/);
 });
+
+test('collection indicators compare current texts without revealing content or changing data', async () => {
+ const {collectionStatus}=await import('../tgcloud/lib/user-info.js');
+ const defaults=['First','Second','Second'];
+ const cases=[
+   [{new:true,texts:defaults},'🌱'],
+   [{new:true,texts:[]},'🌱'],
+   [{new:true,texts:['Imported']},'🌱'],
+   [{new:false,texts:[...defaults]},'📦'],
+   [{texts:['Second','First','Second'],favorites:[0]},'📦'],
+   [{texts:['First','Second']},'✂️'],
+   [{texts:[]},'✂️'],
+   [{texts:[...defaults,'Personal']},'✍️ 1'],
+   [{texts:['Edited','Second','Second']},'✍️ 1'],
+   [{texts:['Private','Private']},'✍️ 2'],
+   [{texts:[...defaults,'Second']},'✍️ 1'],
+   [{texts:['First','First','Second']},'✍️ 1'],
+ ];
+ const before=structuredClone(cases);
+ for(const [data,expected]of cases)assert.equal(collectionStatus(data,defaults),expected);
+ assert.deepEqual(cases,before);assert.deepEqual(defaults,['First','Second','Second']);
+});

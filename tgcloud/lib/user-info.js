@@ -19,3 +19,19 @@ export function lastActive(timestamp, now = Date.now()) {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
   return `${Math.floor(seconds / 86400)}d`;
 }
+
+// Compare current contents, not edit history. Count duplicate copies separately.
+export function collectionStatus(data, defaults) {
+  if (data.new) return '🌱';
+  const remaining = new Map();
+  for (const text of defaults) remaining.set(text, (remaining.get(text) || 0) + 1);
+  let personal = 0;
+  const texts = data.texts || [];
+  for (const text of texts) {
+    const count = remaining.get(text) || 0;
+    if (count) remaining.set(text, count - 1);
+    else personal++;
+  }
+  if (personal) return `✍️ ${personal}`;
+  return texts.length === defaults.length ? '📦' : '✂️';
+}
