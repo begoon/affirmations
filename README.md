@@ -121,8 +121,11 @@ as static files by Telegram Serverless alongside `endpoints/affirmations`.
 The build derives the public app URL from the app ID in `TGCLOUD_TOKEN`; no token
 is included in the front-end or generated runtime content.
 
-The Russian UI lists all texts or favourites and supports favourite changes,
-edits and confirmed deletion. Telegram supplies themes and verified init data
+The Russian UI shows one random flashcard from all texts or favourites. Next
+chooses another text without an immediate repeat when alternatives exist.
+Favourite changes and edits keep the current card; deletion or removing a card
+from the favourites filter selects another eligible card. Editing and confirmed
+deletion remain available on each card. Telegram supplies themes and verified init data
 through `Telegram.WebApp.Serverless.call`; the endpoint only uses the verified
 caller ID. On supported iOS/Android Telegram clients, users can add a home-screen
 icon. New/reset users must tap Start in chat first; creation remains in chat.
