@@ -33,6 +33,14 @@ exposed in bot user profiles. Activity timestamps begin when profile recording
 was added; historical visits cannot be reconstructed. Listing does not send
 messages, change activity timestamps, or print personal affirmations.
 
+The hidden `/users` command sends the same user fields to `OPERATOR_ID` in the
+bot's private chat, split into Telegram-sized messages with a total count. It
+refreshes names through `getChat` and falls back to saved profile fields when a
+lookup fails. It does not change activity timestamps or pending chat input.
+Other users' `/users` messages are silently ignored, including during editing
+or support input. The command is deliberately absent from the public command
+menu and user guide. No affirmation texts or support questions are included.
+
 `just export-data` saves a version-2 recovery snapshot to
 `exports/snapshot-*.json`. It includes:
 

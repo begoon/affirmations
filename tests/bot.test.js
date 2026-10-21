@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, next) {
   return next(specifier, context);
 }, load(url, context, next) {
   if (url === 'mock:sdk') return { format: 'module', source: 'export const {api,db} = globalThis.mockSdk; export class EndpointError extends Error { constructor(message, parameters) { super(message); this.parameters = parameters; } }', shortCircuit: true };
-  if (url === 'mock:sdk/db') return { format: 'module', source: `const c = name => ({name, primaryKey(){return this},notNull(){return this},default(){return this}}); export const integer=c,json=c; export const table=(name,cols)=>{for(const key of Object.keys(cols)) cols[key].name=key;return {...cols,tableName:name}}; export const eq=(c,v)=>r=>r[c.name]===v; export const and=(...ps)=>r=>ps.every(p=>p(r));`, shortCircuit: true };
+  if (url === 'mock:sdk/db') return { format: 'module', source: `const c = name => ({name, primaryKey(){return this},notNull(){return this},default(){return this}}); export const integer=c,json=c; export const table=(name,cols)=>{for(const key of Object.keys(cols)) cols[key].name=key;return {...cols,tableName:name}}; export const eq=(c,v)=>r=>r[c.name]===v; export const and=(...ps)=>r=>ps.every(p=>p(r)); export const gt=(c,v)=>r=>r[c.name]>v; export const asc=c=>(a,b)=>a[c.name]-b[c.name];`, shortCircuit: true };
   return next(url, context);
 }});
 let rows, sent, answers, failOperator;
@@ -17,7 +17,7 @@ globalThis.mockSdk = {
  api: { async sendPhoto(p) {sent.push(p);return {message_id:sent.length};}, async sendMessage(p) { if (failOperator && p.chat_id !== 7) throw {code:403}; sent.push(p); return {message_id:sent.length}; }, async answerCallbackQuery(p) {answers.push(p);} },
  db: {
   insert(table) { const rows=tableRows(table); let value; return {values(v){value=v;return this},onConflictDoNothing(){return this},returning(){return this},async run(){if(rows.has(value.id)) return []; rows.set(value.id, structuredClone(value)); return [structuredClone(value)];}} },
-  select() {let pred,rows;return {from(table){rows=tableRows(table);return this},where(p){pred=p;return this},async get(){return structuredClone([...rows.values()].find(pred))}}},
+  select() {let pred,rows,sort,limit=Infinity;return {from(table){rows=tableRows(table);return this},where(p){pred=p;return this},orderBy(s){sort=s;return this},limit(n){limit=n;return this},async all(){return structuredClone([...rows.values()].filter(pred).sort(sort).slice(0,limit))},async get(){return structuredClone([...rows.values()].find(pred))}}},
   update() {let value,pred;return {set(v){value=v;return this},where(p){pred=p;return this},returning(){return this},async run(){const found=[...rows.values()].filter(pred); for(const r of found) Object.assign(r,structuredClone(value)); return found;}}},
  }
 };
@@ -300,4 +300,52 @@ test('miniapp handles last deletion, onboarding, reset and competing writes', as
  await handle(clickData(dataFor(sent.at(-1),'start')));
  const fresh=await appList(); assert.ok(fresh.items.length);
  assert.equal(fresh.items.some(x=>x.id===list.items[0]?.id),false);
+});
+
+test('/users is silently ignored for non-operators without reads, writes or replies', async () => {
+ seedExisting();
+ const before=structuredClone([...rows]);
+ const originalSelect=globalThis.mockSdk.db.select, originalInsert=globalThis.mockSdk.db.insert;
+ globalThis.mockSdk.db.select=()=>{throw Error('unauthorized database read')};
+ globalThis.mockSdk.db.insert=()=>{throw Error('unauthorized database write')};
+ try {
+   for(const mode of ['main','edit','create','help']) {
+     rows.get(7).data.mode=mode;
+     for(const text of ['/users',' /users@talking_brain_bot ']) await handle({...message(text),reply_to_message:{message_id:123}});
+     assert.equal(rows.get(7).data.mode,mode);
+   }
+   await handle({from:{id:999},chat:{id:999,type:'private'},text:'/users'});
+   await handle({from:{id:operatorId},chat:{id:-100,type:'supergroup'},text:'/users'});
+   assert.equal(sent.length,0);assert.equal(answers.length,0);
+   rows.get(7).data.mode='main';assert.deepEqual([...rows],before);
+ }finally{globalThis.mockSdk.db.select=originalSelect;globalThis.mockSdk.db.insert=originalInsert;}
+});
+test('/users lists paginated profiles only to operator, preserves state and splits messages', async () => {
+ seedExisting(); rows.clear();
+ for(let id=45;id>0;id--) rows.set(id,{id,revision:7,data:{mode:'edit',new:false,texts:['PRIVATE AFFIRMATION'],favorites:[0],current:0,lastUpdate:99,telegramUser:{first_name:`Saved ${id}`,last_name:'Last',username:'oldname',email:id===1?'saved@example.com':undefined},profileLastSeenAt:new Date(Date.now()-120000).toISOString()}});
+ const before=structuredClone([...rows]);const lookedUp=[];
+ const original=globalThis.mockSdk.api.getChat;
+ globalThis.mockSdk.api.getChat=async({chat_id})=>{lookedUp.push(chat_id);if(chat_id===2)throw {code:403};return {id:chat_id,first_name:`Fresh ${chat_id}`,last_name:'<b>Literal</b>\nName',...(chat_id===1?{username:'fresh'}:{})};};
+ try{
+   // Even when sent as a Telegram reply, this must not become a support answer.
+   await handle({from:{id:operatorId},chat:{id:operatorId,type:'private'},text:'/users@talking_brain_bot',reply_to_message:{message_id:111}});
+   assert.deepEqual(lookedUp,Array.from({length:45},(_,i)=>i+1));
+   assert.deepEqual([...rows],before);
+   assert.ok(sent.length>1);assert.ok(sent.every(p=>p.chat_id===operatorId && p.text.length<=4096 && !p.parse_mode));
+   assert.ok(sent.every(p=>p.link_preview_options.is_disabled));
+   const text=sent.map(p=>p.text).join('\n');
+   assert.match(text,/Fresh 1/);assert.match(text,/@fresh/);assert.match(text,/saved@example.com/);
+   assert.match(text,/Saved 2/);assert.match(text,/Профиль Telegram недоступен/);
+   assert.match(text,/Фамилия: <b>Literal<\/b> Name/);
+   assert.match(text,/Активность: 2m/);assert.match(text,/Всего пользователей: 45/);
+   assert.doesNotMatch(text,/PRIVATE AFFIRMATION|💬/);
+ }finally{globalThis.mockSdk.api.getChat=original;}
+});
+test('/users handles empty database and oversized profile fields safely', async () => {
+ seedExisting();rows.clear();
+ const own={from:{id:operatorId},chat:{id:operatorId,type:'private'},text:'/users'};
+ await handle(own);assert.equal(sent.length,1);assert.match(sent[0].text,/Всего пользователей: 0/);
+ const {userEntry}=await import('../tgcloud/lib/users-command.js');
+ const entry=userEntry({id:9,data:{telegramUser:{first_name:'😀'.repeat(2000),last_name:'L'.repeat(2000),username:'U'.repeat(2000),email:'E'.repeat(2000)}}},null,Date.now());
+ assert.ok(entry.length<3500);assert.match(entry,/Активность: -/);assert.doesNotMatch(entry,/\ud83d(?!\ude00)/u);
 });

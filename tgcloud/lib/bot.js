@@ -4,11 +4,13 @@ import { users } from '../schema.js';
 import { ensureTextIds, resolveButton, callbackData } from './buttons.js';
 import { initial, transition } from './flow.js';
 import { languages, miniappUrl } from './content.js';
+import { handleUsersCommand } from './users-command.js';
 import { notifyOperator, handleOperatorReply } from './support.js';
 export async function handle(event, ctx = {}) {
   const callback = !!event.data;
   const message = callback ? event.message : event;
   if (!event.from || event.from.is_bot || message?.chat?.type !== 'private' || message.chat.id !== event.from.id) return;
+  if (!callback && await handleUsersCommand(event)) return;
   if (!callback && await handleOperatorReply(event)) return;
   const id = event.from.id;
   await db.insert(users).values({ id, revision: 0, data: initial(id) }).onConflictDoNothing({ target: users.id }).run();
