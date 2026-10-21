@@ -98,7 +98,7 @@ try {
     console.log('Send /start and tap «Начать». A later /reset restores common texts.');
   } else if (mode === 'setup') {
     const me = await run(`import { api } from 'sdk'; import { languages } from '../lib/content.js';
-      export default async () => { const t = languages.ru; const commands = [{command:'start',description:t.commandStart},{command:'favorites',description:t.commandFavorites},{command:'help',description:t.commandHelp},{command:'reset',description:t.commandReset}];
+      export default async () => { const t = languages.ru; const commands = [{command:'start',description:t.commandStart},{command:'view',description:t.commandView},{command:'favorites',description:t.commandFavorites},{command:'help',description:t.commandHelp},{command:'reset',description:t.commandReset}];
       await api.setMyCommands({commands}); await api.setMyCommands({commands, language_code:'ru'}); return await api.getMe(); };`);
     const html = await readFile('docs/index.html', 'utf8');
     await writeFile('docs/index.html', html.replace(/https:\/\/t\.me\/[A-Za-z0-9_]+/g, `https://t.me/${me.username}`));

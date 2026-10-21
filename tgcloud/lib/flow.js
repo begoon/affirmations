@@ -43,6 +43,7 @@ export function transition(original, event, random = Math.random) {
   const back = () => s.new ? welcome() : main();
   const prompt = mode => { s.mode = mode; text = t[mode + 'Prompt']; buttons = [[mode === 'reset' ? 'reset' : 'cancel']]; if(mode === 'reset') buttons[0].push('cancel'); };
   const cmd = event.text?.trim().split(/\s/)[0].split('@')[0];
+  if (cmd === '/view') return { state: s, text: t.viewPrompt, buttons: [], openMiniapp: true };
   if (cmd === '/reset') prompt('reset');
   else if (cmd === '/help') prompt('help');
   else if (cmd === '/start') { s.view = 'all'; back(); }

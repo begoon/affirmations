@@ -1,3 +1,4 @@
+import { languages } from '../tgcloud/lib/content.js';
 import { registerHooks } from 'node:module';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ registerHooks({ resolve(specifier, context, next) {
   if (specifier === 'sdk' || specifier === 'sdk/db') return { url: `mock:${specifier}`, shortCircuit: true };
   return next(specifier, context);
 }, load(url, context, next) {
-  if (url === 'mock:sdk') return { format: 'module', source: 'export const {api,db} = globalThis.mockSdk;', shortCircuit: true };
+  if (url === 'mock:sdk') return { format: 'module', source: 'export const {api,db} = globalThis.mockSdk; export class EndpointError extends Error { constructor(message, parameters) { super(message); this.parameters = parameters; } }', shortCircuit: true };
   if (url === 'mock:sdk/db') return { format: 'module', source: `const c = name => ({name, primaryKey(){return this},notNull(){return this},default(){return this}}); export const integer=c,json=c; export const table=(name,cols)=>{for(const key of Object.keys(cols)) cols[key].name=key;return {...cols,tableName:name}}; export const eq=(c,v)=>r=>r[c.name]===v; export const and=(...ps)=>r=>ps.every(p=>p(r));`, shortCircuit: true };
   return next(url, context);
 }});
@@ -188,7 +189,7 @@ test('welcome uses logo and Start button; normal texts stay plain messages; rese
  rows=new Map();otherTables.clear();sent=[];answers=[];failOperator=false;
  await handle(message('/start'));
  const welcome=sent.at(-1);
- assert.equal(welcome.caption,'Добро пожаловать!');
+ assert.equal(welcome.caption,languages.ru.welcome);
  assert.match(welcome.photo,/bot-logo\.png$/);
  assert.equal(welcome.text,undefined);
  await handle(clickData(dataFor(welcome,'start')));
@@ -197,7 +198,7 @@ test('welcome uses logo and Start button; normal texts stay plain messages; rese
  assert.ok(sent.at(-1).text);
  await handle(message('/reset'));
  await handle(clickData(dataFor(sent.at(-1),'reset')));
- assert.equal(sent.at(-1).caption,'Добро пожаловать!');
+ assert.equal(sent.at(-1).caption,languages.ru.welcome);
  assert.equal(sent.at(-1).photo,welcome.photo);
 });
 test('failed welcome photo falls back to usable text onboarding', async () => {
@@ -206,8 +207,97 @@ test('failed welcome photo falls back to usable text onboarding', async () => {
  globalThis.mockSdk.api.sendPhoto=async()=>{throw {code:400};};
  try {
    await handle(message('/start'));
-   assert.equal(sent.at(-1).text,'Добро пожаловать!');
+   assert.equal(sent.at(-1).text,languages.ru.welcome);
    assert.ok(dataFor(sent.at(-1),'start'));
    assert.equal(rows.get(7).data.new,true);
  } finally {globalThis.mockSdk.api.sendPhoto=original;}
+});
+
+const { default: miniapp } = await import('../tgcloud/endpoints/affirmations.js');
+const appContext = { initData: { user: { id: 7 } } };
+const appList = () => miniapp({ action: 'list' }, appContext);
+const appChange = (snapshot, action, index, extra = {}) => miniapp({ action, id: snapshot.items[index].id, revision: snapshot.revision, ...extra }, appContext);
+test('/view launches the app, preserves input, and welcome explains both modes', async () => {
+ seedExisting(); await handle(message('/start'));
+ await handle(clickData(dataFor(sent.at(-1), 'edit')));
+ const before = structuredClone(rows.get(7).data);
+ await handle(message('/view@talking_brain_bot'), {update:{update_id:23}});
+ assert.equal(rows.get(7).data.mode, 'edit');
+ assert.equal(rows.get(7).data.current, before.current);
+ assert.deepEqual(rows.get(7).data.texts, before.texts);
+ assert.match(sent.at(-1).reply_markup.inline_keyboard[0][0].web_app.url, /^https:\/\/app\d+\.tgcloud.ai\/$/);
+ const count = sent.length;
+ await handle(message('/view'), {update:{update_id:23}}); assert.equal(sent.length, count);
+ await handle(message('Still editing'), {update:{update_id:24}});
+ assert.equal(rows.get(7).data.texts[0], 'Still editing');
+ assert.match(languages.ru.welcome, /чате/); assert.match(languages.ru.welcome, /\/view/);
+});
+test('miniapp verifies caller, projects private data, migrates IDs, validates input and isolates users', async () => {
+ seedExisting();
+ const before = structuredClone(rows.get(7));
+ for (const ctx of [{}, {initData:{user:{id:7,is_bot:true}}}]) {
+   await assert.rejects(miniapp({action:'list'}, ctx), e => e.parameters.code === 'AUTH');
+ }
+ assert.deepEqual(rows.get(7), before);
+ const list = await appList();
+ assert.deepEqual(Object.keys(list).sort(), ['items','needsStart','revision']);
+ assert.equal(list.items.length, 3); assert.equal(list.items[0].text, 'Alpha');
+ assert.deepEqual(await appList(), list);
+ rows.set(8, {id:8, revision:1, data:{...structuredClone(rows.get(7).data), texts:['Private'], textIds:['other']}});
+ const other = structuredClone(rows.get(8));
+ await assert.rejects(miniapp({action:'delete',id:'other',revision:list.revision,userId:8},appContext), e=>e.parameters.code==='NOT_FOUND');
+ for (const text of ['', ' ', 'x'.repeat(4001), 123]) await assert.rejects(appChange(list,'edit',0,{text}), e=>e.parameters.code==='INVALID');
+ await assert.rejects(appChange(list,'favorite',0,{favorite:'yes'}), e=>e.parameters.code==='INVALID');
+ const updated = await appChange(list,'favorite',0,{favorite:true});
+ assert.equal(updated.items[0].favorite,true); assert.deepEqual(rows.get(8),other);
+ const edited = await appChange(updated,'edit',0,{text:' Edited '});
+ assert.equal(edited.items[0].text,'Edited'); assert.equal(edited.items[0].favorite,true);
+ assert.equal(edited.items[0].id,list.items[0].id);
+ await assert.rejects(appChange(list,'delete',0), e=>e.parameters.code==='CONFLICT');
+});
+test('miniapp deletion shifts a pending chat edit safely and old chat buttons retain identity', async () => {
+ seedExisting(); await handle(message('/start'));
+ const alphaMessage=sent.at(-1);
+ let list=await appList(); const betaId=list.items[1].id;
+ await handle(clickData(`a:edit:${betaId}:a`));
+ list=await appList(); await appChange(list,'delete',0);
+ assert.equal(rows.get(7).data.current,0); assert.equal(rows.get(7).data.mode,'edit');
+ await handle(message('Edited Beta'));
+ assert.deepEqual(rows.get(7).data.texts,['Edited Beta','Gamma']);
+ await handle(clickData(dataFor(alphaMessage,'favorite')));
+ assert.match(answers.at(-1).text,/недоступен/);
+ await handle(clickData(`a:favorite:${betaId}:a`));
+ assert.deepEqual(rows.get(7).data.favorites,[0]);
+ await handle(clickData(`a:edit:${betaId}:a`));
+ list=await appList(); await appChange(list,'delete',0);
+ assert.equal(rows.get(7).data.mode,'main');
+ await handle(message('Must not edit Gamma'));
+ assert.deepEqual(rows.get(7).data.texts,['Gamma']);
+});
+test('miniapp edit cancels pending same-text chat edit, but preserves help and lastUpdate', async () => {
+ seedExisting(); await handle(message('/start'),{update:{update_id:9}});
+ await handle(clickData(dataFor(sent.at(-1),'edit')));
+ let list=await appList(); await appChange(list,'edit',0,{text:'From app'});
+ await handle(message('Obsolete draft'));
+ assert.equal(rows.get(7).data.texts[0],'From app');
+ await handle(message('/help'));
+ list=await appList(); await appChange(list,'delete',0);
+ assert.equal(rows.get(7).data.mode,'help'); assert.equal(rows.get(7).data.lastUpdate,9);
+});
+test('miniapp handles last deletion, onboarding, reset and competing writes', async () => {
+ seedExisting(['Only']); let list=await appList();
+ const results=await Promise.allSettled([appChange(list,'edit',0,{text:'Winner'}),appChange(list,'delete',0)]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+ assert.equal(results.find(r=>r.status==='rejected').reason.parameters.code,'CONFLICT');
+ list=await appList();
+ if(list.items.length) list=await appChange(list,'delete',0);
+ assert.deepEqual(list.items,[]);
+ await handle(message('/start')); assert.deepEqual(rows.get(7).data.texts,[]);
+ await handle(message('/reset'));
+ await handle(clickData(dataFor(sent.at(-1),'reset')));
+ assert.equal((await appList()).needsStart,true);
+ await assert.rejects(miniapp({action:'edit',revision:rows.get(7).revision,id:'old',text:'Bad'},appContext),e=>e.parameters.code==='START_REQUIRED');
+ await handle(clickData(dataFor(sent.at(-1),'start')));
+ const fresh=await appList(); assert.ok(fresh.items.length);
+ assert.equal(fresh.items.some(x=>x.id===list.items[0]?.id),false);
 });

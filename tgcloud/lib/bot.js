@@ -3,7 +3,7 @@ import { and, eq } from 'sdk/db';
 import { users } from '../schema.js';
 import { ensureTextIds, resolveButton, callbackData } from './buttons.js';
 import { initial, transition } from './flow.js';
-import { languages } from './content.js';
+import { languages, miniappUrl } from './content.js';
 import { notifyOperator, handleOperatorReply } from './support.js';
 export async function handle(event, ctx = {}) {
   const callback = !!event.data;
@@ -48,6 +48,12 @@ export async function handle(event, ctx = {}) {
   const reply_markup = {
     inline_keyboard: result.buttons.map(line => line.map(key => ({ text: t[key], callback_data: callbackData(key, result, revision) }))),
   };
+  if (result.openMiniapp) {
+    await api.sendMessage({ chat_id: id, text: result.text, reply_markup: {
+      inline_keyboard: [[{ text: t.openMiniapp, web_app: { url: miniappUrl } }]],
+    } });
+    return;
+  }
   if (result.state.new && result.state.mode === 'welcome') {
     try {
       await api.sendPhoto({

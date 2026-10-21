@@ -112,3 +112,29 @@ GitHub Pages serves `docs/` from `main` in this public repository,
 Commit guide changes on `main`, then run `just docs-deploy` to push them and
 trigger GitHub Pages. This pushes all pending commits on `main`.
 No separate publishing repository, `gh-pages` branch, or redirect is needed.
+
+## Mini App
+
+`/view` sends a Mini App launch button and preserves pending chat input. The
+welcome message describes both chat and Mini App modes. `miniapp/` is deployed
+as static files by Telegram Serverless alongside `endpoints/affirmations`.
+The build derives the public app URL from the app ID in `TGCLOUD_TOKEN`; no token
+is included in the front-end or generated runtime content.
+
+The Russian UI lists all texts or favourites and supports favourite changes,
+edits and confirmed deletion. Telegram supplies themes and verified init data
+through `Telegram.WebApp.Serverless.call`; the endpoint only uses the verified
+caller ID. On supported iOS/Android Telegram clients, users can add a home-screen
+icon. New/reset users must tap Start in chat first; creation remains in chat.
+
+Both interfaces share permanent text IDs and revision-conditional writes. Stale
+Mini App writes fail with a refresh prompt. Deletion adjusts chat selection and
+favourite indexes; deleting or editing the text awaiting a chat edit cancels that
+pending edit. Other pending chat input is preserved. Opening the app does not
+send chat messages. Existing chat messages are not rewritten after app changes.
+The endpoint returns only text IDs, texts, favourite flags, onboarding status
+and revision, never support or profile data.
+
+Run `just test`, then `just deploy` to publish the bot, Mini App, and `/view`
+command. Publish the updated `docs/index.html` through the existing GitHub Pages
+workflow (`just docs-deploy` after committing the guide on main).

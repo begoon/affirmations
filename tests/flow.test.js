@@ -1,3 +1,4 @@
+import { languages } from '../tgcloud/lib/content.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initial, transition } from '../tgcloud/lib/flow.js';
@@ -6,7 +7,7 @@ const step = (s, event) => transition(s, { userId: 1, ...event }, () => 0);
 const start = () => step(initial(1), { action: 'start' }).state;
 test('welcome, explicit start and common seeds for every user', () => {
   const s = initial(1);
-  assert.equal(step(s, { text: '/start' }).text, 'Добро пожаловать!');
+  assert.equal(step(s, { text: '/start' }).text, languages.ru.welcome);
   assert.equal(s.new, true); assert.equal(start().new, false);
   s.texts[0] = 'changed'; assert.notEqual(initial(2).texts[0], 'changed');
   assert.deepEqual(initial(429995878).texts, seeds.common);

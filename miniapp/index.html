@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Мои аффирмации</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<main>
+<header><p class="eyebrow">СЛОВА, КОТОРЫЕ РЯДОМ</p><h1>Мои аффирмации</h1><p class="subtitle">Ваша личная подборка поддержки.</p></header>
+<nav aria-label="Подборка"><div class="tabs"><button id="all" aria-pressed="true">Все тексты</button><button id="favorites" aria-pressed="false">Избранное</button></div><button id="refresh" class="quiet" aria-label="Обновить список">↻</button></nav>
+<p id="status" role="status" aria-live="polite">Загружаем подборку…</p>
+<section id="list" aria-label="Аффирмации" aria-busy="true"></section>
+<footer><p>Изменения сохраняются и в чате с ботом.</p><button id="install" class="quiet" hidden>Добавить на главный экран</button></footer>
+</main>
+<dialog id="editor" aria-labelledby="editor-title">
+<form id="edit-form"><h2 id="editor-title">Ваши слова</h2><label for="text">Текст аффирмации</label><textarea id="text" maxlength="4000" rows="7" required></textarea><p id="edit-error" role="alert"></p><div class="actions"><button type="button" id="edit-cancel" class="quiet">Отмена</button><button type="submit" class="primary">Сохранить</button></div></form>
+</dialog>
+<dialog id="deletion" aria-labelledby="delete-title">
+<h2 id="delete-title">Удалить аффирмацию?</h2><p>Текст исчезнет из вашей подборки и избранного.</p><blockquote id="delete-text"></blockquote><p id="delete-error" role="alert"></p><div class="actions"><button id="delete-cancel" class="quiet">Отмена</button><button id="delete-confirm" class="danger">Удалить</button></div>
+</dialog>
+</body>
+</html>
