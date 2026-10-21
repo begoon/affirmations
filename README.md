@@ -162,3 +162,80 @@ and revision, never support or profile data.
 Run `just test`, then `just deploy` to publish the bot, Mini App, and `/view`
 command. Publish the updated `docs/index.html` through the existing GitHub Pages
 workflow (`just docs-deploy` after committing the guide on main).
+
+## Database structure
+
+The Telegram Serverless database schema is defined in
+[`tgcloud/schema.js`](tgcloud/schema.js). It has three tables. Affirmations,
+favourites and conversation state are stored together in each user's JSON
+record; there is no separate affirmations table. Chat and Mini App operations
+use the same records.
+
+### `users`
+
+| Column | SDK type | Constraints | Purpose |
+| --- | --- | --- | --- |
+| `id` | `integer` | Primary key | Telegram user ID; also the user's private chat ID. |
+| `revision` | `integer` | Not null, default `0` | Version used for conditional updates to prevent concurrent writes from overwriting each other. |
+| `data` | `json` | Not null | User's collection, chat state and saved Telegram profile. |
+
+The `data` object has the following application-managed fields. JSON field
+names use camelCase and are not separate database columns.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `language` | string | UI language, initially `ru`; unsupported values fall back to Russian. |
+| `new` | boolean | Awaiting the Start button, including after reset or manual import. |
+| `mode` | string | Chat state: `welcome`, `main`, `edit`, `create`, `delete`, `reset`, `help` or `helpSent`. |
+| `texts` | string array | Ordered personal collection. Duplicate texts are allowed. Input must be nonempty and at most 4000 JavaScript UTF-16 code units per text. |
+| `textIds` | string array, optional until initialised | Permanent per-user IDs parallel to `texts`, used by chat buttons and Mini App mutations. |
+| `current` | integer | Zero-based index of the chat's selected text, or `-1` when none is selected. The Mini App's current card is browser state. |
+| `favorites` | integer array | Zero-based indexes into `texts`, not text IDs. Defaults to an empty array for older records. |
+| `view` | string | Chat filter: `all` or `favorites`; defaults to `all` for older records. |
+| `lastUpdate` | integer | Last claimed Telegram update ID for normal chat processing; initially `-1`. |
+| `telegramUser` | object, optional | Latest Telegram `User` object captured from a processed chat update, including available identity fields. |
+| `profileFirstSeenAt` | ISO timestamp string, optional | First time profile recording observed the user, not necessarily their registration date. |
+| `profileLastSeenAt` | ISO timestamp string, optional | Last recorded chat interaction or successful Mini App mutation. |
+
+`textIds[i]` identifies `texts[i]`. IDs are derived from database revisions and
+survive edits and index shifts. Deletion removes both array entries and adjusts
+favourite indexes and chat selection. Reset and manual import invalidate old
+IDs; new IDs are allocated when needed. Updating a collection increments
+`revision` and requires the previously read revision to still match.
+
+The JSON record stores current state, not an edit/add/delete history. The
+📦 / ✍️ / ✂️ / 🌱 collection indicators are computed when listing users by
+comparing `texts` with the common seed; they are not stored fields. Read-only
+Mini App browsing and administrative user listings do not update activity.
+The full `getChat` results used by listings and exports are not persisted back
+to `data`; export enrichment is stored separately under the exported `user` key.
+
+### `support_messages`
+
+| Column | SDK property | SDK type | Constraints | Purpose |
+| --- | --- | --- | --- | --- |
+| `id` | `id` | `integer` | Primary key | Message ID of a support notification sent to the operator. |
+| `operator_id` | `operatorId` | `integer` | Not null | Telegram ID of the operator who received it. |
+| `user_id` | `userId` | `integer` | Not null | Telegram ID of the user to whom an operator reply should be delivered. |
+
+This is a routing table, not a transcript. Each notification chunk has its own
+row. A Telegram reply to that notification is looked up using its message ID
+and the configured operator ID. `user_id` logically refers to `users.id`, but
+no database foreign key is declared.
+
+### `support_replies`
+
+| Column | SDK type | Constraints | Purpose |
+| --- | --- | --- | --- |
+| `id` | `integer` | Primary key | Incoming operator reply's Telegram message ID, used to deduplicate delivery attempts. |
+
+The reply ID is inserted before sending the answer. A recorded ID means the
+attempt was claimed, not that delivery succeeded. Failed delivery requires a
+new reply message to retry. Support message IDs are scoped to the configured
+operator's private chat; these tables assume a single operator and do not
+store question or answer bodies.
+
+There are no declared foreign keys or secondary indexes. Application code
+maintains relationships and JSON invariants. Deploying code and applying
+schema migrations are separate operations; `just deploy` applies safe migrations.
+`just export-data` includes all three tables and the deployed schema for recovery.
