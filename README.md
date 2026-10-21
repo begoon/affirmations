@@ -114,8 +114,8 @@ clears texts and state, and restores the common seed only after Start.
 `/start` exits an input mode. Text buttons carry permanent per-user IDs, so
 buttons on older messages still target their original texts after edits and
 deletions elsewhere in the collection. Reset/manual seeding invalidates those IDs.
-Pre-upgrade messages are matched to an unambiguous text during migration;
-ambiguous or missing matches are refused. Delete confirmations target the text
+Legacy callback formats and missing text IDs are refused; send `/start` to
+get current buttons. Delete confirmations target the text
 ID; reset confirmations remain tied to the current revision. Conditional
 database updates prevent concurrent changes from overwriting one another. Duplicate update IDs are ignored. Failed operator delivery restores
 help input mode. State writes and Telegram message delivery are not one atomic
@@ -239,3 +239,77 @@ There are no declared foreign keys or secondary indexes. Application code
 maintains relationships and JSON invariants. Deploying code and applying
 schema migrations are separate operations; `just deploy` applies safe migrations.
 `just export-data` includes all three tables and the deployed schema for recovery.
+
+## Callback and reply IDs
+
+Inline buttons are encoded and resolved in
+[`tgcloud/lib/buttons.js`](tgcloud/lib/buttons.js), then processed by
+[`tgcloud/lib/bot.js`](tgcloud/lib/bot.js). Several different IDs are involved:
+
+| Value | Purpose |
+| --- | --- |
+| Button `callback_data` | Application payload describing the action, target text and browsing filter. |
+| `data.textIds[i]` | Stable identifier of `data.texts[i]` within one user's collection. |
+| Callback query `id` | Telegram's ID for a particular button press; passed to `answerCallbackQuery` to acknowledge it. It is not a text ID or database key. |
+| Telegram `update_id` | Compared with `data.lastUpdate` to ignore duplicate or older updates. |
+| Telegram `message_id` | Identifies a message within its chat. Used for support reply routing, not for locating an affirmation. |
+| `users.revision` | Database version used for conditional writes and reset-confirmation expiry. |
+
+### Button payloads
+
+Ordinary buttons use `a:<action>:<textId>:<view>`, where `view` is `a` for all
+texts or `f` for favourites. Buttons that do not target a specific text use `-`
+instead of a text ID.
+
+| Example | Meaning |
+| --- | --- |
+| `a:favorite:a.0:a` | Toggle the favourite status of text `a.0`, from an all-texts message. |
+| `a:edit:a.0:f` | Edit text `a.0`, from a favourites message. |
+| `a:delete:a.0:a` | Ask for confirmation to delete text `a.0`. |
+| `a:confirmDelete:a.0:a` | Confirm deletion of that same text. |
+| `a:more:-:f` | Pick another text from favourites. |
+| `a:create:-:a` | Enter new-text input mode. |
+| `r:12` | Confirm reset only while the stored revision is `12` and chat mode is `reset`. |
+
+Targeted actions are `favorite`, `unfavorite`, `edit`, `delete` and
+`confirmDelete`. Navigation actions are `more`, `create`, `all`, `continue`,
+`cancel` and `start`. Both heart actions toggle the current saved status, so a
+heart button on an old message still works even if its displayed icon is stale.
+
+Text IDs are strings, not array indexes. Initial allocation uses
+`<revision in base 36>.<index in base 36>`: revision 10 and index 0 produce
+`a.0`. A newly created text uses `<revision in base 36>.n`; for example, `b.n`
+at revision 11. The ID stays unchanged when the text is edited or when another
+text's deletion shifts its array index.
+
+On a press, the handler loads the pressing user's record and resolves the text
+ID against the **current** `textIds` array. For example, if `a.1` moves from
+index 1 to index 0 after deletion, an old button containing `a.1` still targets
+that text. If the ID no longer exists, the bot acknowledges the callback with
+an unavailable-text message and does not apply the action. Unknown actions and
+legacy payload formats are also rejected. Callbacks are accepted only from a
+user in their own private bot chat.
+
+Reset and manual seeding invalidate old text IDs. Reset confirmation is also
+bound to an exact revision, so a later state change expires it. Delete
+confirmation is bound to the text ID instead: it can still delete that text
+after navigation or editing, provided the ID remains valid. It does not compare
+the text's current contents with the original confirmation message.
+
+After resolving a valid press, the handler acknowledges the callback, computes
+the next state and saves it only if the database revision still matches the
+one it read. The saved state advances `revision` and records `lastUpdate`.
+If another operation wins the write, this handler stops without overwriting it.
+Acknowledging a callback therefore does not itself mean the state was saved.
+The bot sends a new response message after a successful write; it does not
+rewrite the old message containing the pressed button.
+
+### Support replies use message IDs
+
+An operator's Telegram Reply is a message, not a callback query. Its
+`reply_to_message.message_id` identifies the original support notification in
+`support_messages`. That row supplies the destination `user_id`, and its
+`operator_id` must match the configured operator. The incoming reply's own
+`message_id` is claimed in `support_replies` before delivery to prevent another
+attempt for the same reply. These IDs are scoped to the operator's chat and
+are independent of affirmation IDs, callback payloads and user revisions.
