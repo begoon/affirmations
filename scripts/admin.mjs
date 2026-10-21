@@ -54,7 +54,8 @@ async function readTable(name) {
 }
 try {
   if (mode === 'list-users') {
-    console.log(usersTable(await readUsers()));
+    const defaults = (await readFile('data/common.txt', 'utf8')).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    console.log(usersTable(await readUsers(), Date.now(), defaults));
   } else if (mode === 'export-data') {
     const startedAt = new Date().toISOString();
     // Use the deployed schema for recovery, rather than any unshipped local changes.

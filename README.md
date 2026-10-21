@@ -25,13 +25,16 @@ just docs-deploy
 the webhook, and registers commands. The deploy script recovers from the CLI
 0.2.0 snapshot-writing bug by fetching the server snapshot after upload.
 
-`just list-users` prints a console table: ID, first name, last name, nick, email,
-and last active (for example `1m`, `2h`, `3d`). Names are refreshed with `getChat`;
-other saved profile fields come from processed Telegram updates. `-` means the
-field or activity time is unavailable. Email and phone numbers are not normally
-exposed in bot user profiles. Activity timestamps begin when profile recording
-was added; historical visits cannot be reconstructed. Listing does not send
-messages, change activity timestamps, or print personal affirmations.
+`just list-users` prints an aligned console table with ID, first name, last name,
+username, email, last activity and collection status. It uses the same activity
+markers (🟢 under 60m, 🟡 under 24h) and collection indicators as `/users`,
+sorted by most recent activity with unknown activity last. Missing fields are
+blank. Names are refreshed with `getChat`; unavailable profiles fall back to
+saved fields. Collection indicators compare against `data/common.txt`. Email
+and phone numbers are not normally exposed in bot user profiles. Activity
+timestamps begin when profile recording was added; historical visits cannot
+be reconstructed. Listing does not send messages, change activity timestamps,
+or print personal affirmations. Terminal escape sequences are stripped.
 
 The hidden `/users` command sends the same user fields to `OPERATOR_ID` in the
 bot's private chat, one line per user, sorted by latest activity (unknown last),

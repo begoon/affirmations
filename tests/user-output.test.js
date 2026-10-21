@@ -49,3 +49,25 @@ test('collection indicators compare current texts without revealing content or c
  for(const [data,expected]of cases)assert.equal(collectionStatus(data,defaults),expected);
  assert.deepEqual(cases,before);assert.deepEqual(defaults,['First','Second','Second']);
 });
+
+test('console table retains columns, activity order and collection markers without mutating rows', () => {
+ const now=Date.parse('2026-10-21T12:00:00Z');
+ const defaults=['Starter'];
+ const make=(id,minutes,texts,profile,newUser=false)=>{
+   const row={id,data:{new:newUser,texts,profileLastSeenAt:minutes===null?'invalid':new Date(now-minutes*60000).toISOString()}};
+   return {...row,user:userInfo(row,{id,...profile})};
+ };
+ const rows=[make(1,null,[],{} ,true),make(2,2880,[],{first_name:'Older'}),make(3,60,['Personal'],{first_name:'Anna',username:'anna',email:'a@example.com'}),make(4,59,['Starter'],{first_name:'Recent'})];
+ const before=structuredClone(rows);
+ const lines=usersTable(rows,now,defaults).split('\n');
+ assert.match(lines[0],/FIRST NAME.*LAST NAME.*LAST ACTIVE.*TEXTS/);
+ const data=lines.slice(2,6);
+ assert.deepEqual(data.map(line=>Number(line.trim().split(/\s+/)[0])),[4,3,2,1]);
+ assert.match(data[0],/Recent.*🟢 59m.*📦$/);
+ assert.match(data[1],/Anna.*@anna.*a@example.com.*🟡 1h.*✍️ 1$/);
+ assert.match(data[2],/Older.*2d.*✂️$/);
+ assert.match(data[3],/^1 +🌱$/);
+ assert.equal(data[0].indexOf('🟢'),data[1].indexOf('🟡'));
+ assert.ok(lines.some(line=>line.startsWith('4 user(s).')));
+ assert.deepEqual(rows,before);
+});
