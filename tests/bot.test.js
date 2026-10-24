@@ -339,7 +339,7 @@ test('/users lists paginated profiles only to operator, preserves state and spli
    assert.match(text,/<b>Literal<\/b> Name/);
    assert.doesNotMatch(text,/ID:|Email:|Активность:/);assert.match(text,/Всего пользователей: 45/);
    assert.doesNotMatch(text,/PRIVATE AFFIRMATION|💬/);
-   assert.equal(text.split('\n').filter(line=>/^\d+ · /.test(line)).every(line=>line.includes(' · ✍️ 1')),true);
+   assert.equal(text.split('\n').filter(line=>/^\d+ · /.test(line)).every(line=>line.includes(' · ✍️ 1 · ❤️ 1')),true);
  }finally{globalThis.mockSdk.api.getChat=original;}
 });
 test('/users handles empty database and oversized profile fields safely', async () => {
@@ -348,7 +348,7 @@ test('/users handles empty database and oversized profile fields safely', async 
  await handle(own);assert.equal(sent.length,1);assert.match(sent[0].text,/Всего пользователей: 0/);
  const {userEntry}=await import('../tgcloud/lib/users-command.js');
  const entry=userEntry({id:9,data:{telegramUser:{first_name:'😀'.repeat(2000),last_name:'L'.repeat(2000),username:'U'.repeat(2000),email:'E'.repeat(2000)}}},null,Date.now());
- assert.ok(entry.length<3500);assert.match(entry,/ · ✂️ \(сохранённый профиль\)$/);assert.doesNotMatch(entry,/\ud83d(?!\ude00)/u);
+ assert.ok(entry.length<3500);assert.match(entry,/ · ✂️ · ❤️ 0 \(сохранённый профиль\)$/);assert.doesNotMatch(entry,/\ud83d(?!\ude00)/u);
 });
 
 test('/users activity markers use green under 60m and yellow under 24h without labels', async () => {

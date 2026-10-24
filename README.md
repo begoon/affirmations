@@ -37,7 +37,7 @@ the webhook, and registers commands. The deploy script recovers from the CLI
 0.2.0 snapshot-writing bug by fetching the server snapshot after upload.
 
 `just list-users` prints an aligned console table with ID, first name, last name,
-username, email, last activity and collection status. It uses the same activity
+username, email, last activity, collection status and a `FAVS` count. It uses the same activity
 markers (🟢 under 60m, 🟡 under 24h) and collection indicators as `/users`,
 sorted by most recent activity with unknown activity last. Missing fields are
 blank. Names are refreshed with `getChat`; unavailable profiles fall back to
@@ -58,7 +58,7 @@ lookup fails. It does not change activity timestamps or pending chat input.
 Other users' `/users` messages are silently ignored, including during editing
 or support input. The command is deliberately absent from the public command
 menu and user guide. No affirmation texts or support questions are included.
-Each row also shows the current collection: 📦 matches the starter texts,
+Each row also shows the favourite count as ❤️ N (including zero) and the current collection: 📦 matches the starter texts,
 ✍️ N counts personal texts (including extra duplicate copies), ✂️ contains only
 a reduced starter set (including an empty collection), and 🌱 is awaiting Start
 (including after reset or import). Comparison ignores order and favourites and

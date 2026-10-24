@@ -17,6 +17,7 @@ export function formatUser(row, user, defaults, now = Date.now()) {
     field(user.email),
     activity === '-' ? '' : marker + activity,
     collectionStatus(row.data, defaults),
+    `❤️ ${row.data.favorites?.length ?? 0}`,
   ].filter(Boolean).join(' · ') + (!user.chat ? ' (сохранённый профиль)' : '');
   return text;
 }
@@ -30,5 +31,5 @@ export function sortUsers(rows) {
 }
 
 export function usersSummary(count) {
-  return `Всего пользователей: ${count}.\n🟢 — менее 60m; 🟡 — от 1h до 24h. s — секунды, m — минуты, h — часы, d — дни.\n📦 — исходная подборка; ✍️ N — личные тексты; ✂️ — сокращённая; 🌱 — ожидает «Начать».`;
+  return `Всего пользователей: ${count}.\n🟢 — менее 60m; 🟡 — от 1h до 24h. s — секунды, m — минуты, h — часы, d — дни.\n📦 — исходная подборка; ✍️ N — личные тексты; ✂️ — сокращённая; 🌱 — ожидает «Начать»; ❤️ N — избранное.`;
 }
