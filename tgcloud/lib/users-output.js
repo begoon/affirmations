@@ -9,13 +9,13 @@ export function formatUser(row, user, defaults, now = Date.now()) {
   const timestamp = Date.parse(row.data.profileLastSeenAt);
   const age = Number.isFinite(timestamp) ? Math.max(0, now - timestamp) : Infinity;
   const activity = lastActive(row.data.profileLastSeenAt, now);
-  const marker = age < 3600000 ? '🟢 ' : age < 86400000 ? '🟡 ' : '';
+  const marker = age < 3600000 ? ' 🟢' : age < 86400000 ? ' 🟡' : '';
   const text = [
     String(row.id),
     [field(user.first_name), field(user.last_name)].filter(Boolean).join(' '),
     field(user.username ? '@' + user.username : null),
     field(user.email),
-    activity === '-' ? '' : marker + activity,
+    activity === '-' ? '' : activity + marker,
     collectionStatus(row.data, defaults),
     `❤️ ${row.data.favorites?.length ?? 0}`,
   ].filter(Boolean).join(' · ') + (!user.chat ? ' (сохранённый профиль)' : '');

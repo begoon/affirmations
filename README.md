@@ -37,7 +37,7 @@ the webhook, and registers commands. The deploy script recovers from the CLI
 0.2.0 snapshot-writing bug by fetching the server snapshot after upload.
 
 `just list-users` prints an aligned console table with ID, first name, last name,
-username, email, last activity, collection status and a `FAVS` count. It uses the same activity
+username, email, last activity, total `TEXTS` count, `COLLECTION` status and a `FAVS` count. It uses the same activity
 markers (🟢 under 60m, 🟡 under 24h) and collection indicators as `/users`,
 sorted by most recent activity with unknown activity last. Missing fields are
 blank. Names are refreshed with `getChat`; unavailable profiles fall back to

@@ -359,6 +359,7 @@ test('/users activity markers use green under 60m and yellow under 24h without l
    const entry=userEntry(row,{first_name:'I’m',last_name:'OK',username:'AnnaOK'},now);
    assert.ok(entry.startsWith('166564781 · I’m OK · @AnnaOK · '));
    assert.equal(entry.includes('🟢'),marker==='🟢');assert.equal(entry.includes('🟡'),marker==='🟡');
+   if(marker) assert.ok(entry.includes(` ${minutes<60?minutes+'m':Math.floor(minutes/60)+'h'} ${marker} · `));
    assert.doesNotMatch(entry,/\n|ID:|Email:|Активность:|🔴/);
  }
 });

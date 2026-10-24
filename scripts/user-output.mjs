@@ -11,14 +11,15 @@ function width(value) {
   return Array.from(value).reduce((n, char) => n + (/\p{Mark}/u.test(char) ? 0 : /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\uff01-\uff60]/u.test(char) ? 2 : 1), 0);
 }
 export function usersTable(rows, now = Date.now(), defaults = []) {
-  const header = ['ID', 'FIRST NAME', 'LAST NAME', 'NICK', 'EMAIL', 'LAST ACTIVE', 'TEXTS', 'FAVS'];
+  const header = ['ID', 'FIRST NAME', 'LAST NAME', 'NICK', 'EMAIL', 'LAST ACTIVE', 'TEXTS', 'COLLECTION', 'FAVS'];
   const values = sortUsers(rows).map(row => {
     const age = now - Date.parse(row.data.profileLastSeenAt);
     const activity = lastActive(row.data.profileLastSeenAt, now);
-    const marker = age < 3600000 ? '🟢 ' : age < 86400000 ? '🟡 ' : '';
+    const marker = age < 3600000 ? ' 🟢' : age < 86400000 ? ' 🟡' : '';
     return [row.id, row.user.first_name, row.user.last_name,
       row.user.username ? '@' + row.user.username : '', row.user.email,
-      activity === '-' ? '' : marker + activity, collectionStatus(row.data, defaults),
+      activity === '-' ? '' : activity + marker, row.data.texts?.length ?? 0,
+      collectionStatus(row.data, defaults),
       row.data.favorites?.length ?? 0].map(cell);
   });
   const widths = header.map((h, i) => values.reduce((max, row) => Math.max(max, width(row[i])), width(h)));
