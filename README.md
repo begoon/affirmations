@@ -2,6 +2,17 @@
 
 Personal Russian affirmations on Telegram Serverless: https://t.me/talking_brain_bot
 
+The starter collection in [`data/common.txt`](data/common.txt) contains 300
+original Russian reminders about calm, emotional steadiness, self-kindness,
+boundaries, rest, and everyday support. Each line is a separate card. Keep the
+language gentle and specific; avoid money, achievement, forced positivity,
+promises of safety or recovery, and pressure to suppress feelings.
+
+Editorial references: the [Self-Compassion Institute's practice collection](https://self-compassion.org/self-compassion-practices/)
+and [York and Scarborough Teaching Hospitals' feelings and emotion resources](https://www.yorkhospitals.nhs.uk/our-services/organdonation/a-z-of-services/psychological-medicine1/psychological-medicine-self-help-resources/psychological-medicine-self-help-feelings-and-emotion/).
+These informed the themes of self-kindness, grounding, and allowing difficult
+feelings; the cards are original wording, not quotations or a treatment programme.
+
 Requires Node.js 22.15+ (tests use module hooks), npm, and optionally `just`.
 Create `.env` with `BOT_TOKEN`, `TGCLOUD_TOKEN`, and `OPERATOR_ID`.
 The Serverless token comes from BotFather → Serverless → CLI Access.
