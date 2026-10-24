@@ -2,7 +2,7 @@
 
 Personal Russian affirmations on Telegram Serverless: https://t.me/talking_brain_bot
 
-The starter collection in [`data/common.txt`](data/common.txt) contains 300
+The starter collection in [`data/common.txt`](data/common.txt) contains 380
 original Russian reminders about calm, emotional steadiness, self-kindness,
 boundaries, rest, and everyday support. Each line is a separate card. Keep the
 language gentle and specific; avoid money, achievement, forced positivity,
